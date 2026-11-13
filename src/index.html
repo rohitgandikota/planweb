@@ -59,16 +59,33 @@ figcaption { font-size: 13px; line-height: 1.5; text-align: left; max-width: 800
 
 /* Interactive plan */
 #plan { max-width: 900px; margin: 10px auto 0; }
-#plan .stage { background: #fff; border: 1px solid #e6d0d8; border-radius: 8px; overflow-x: auto; }
-#plan svg { display: block; width: 100%; min-width: 640px; height: auto; }
-#plan .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 12px 0 6px; }
+#plan .stage, #patch .stage { background: #fff; border: 1px solid #e6d0d8; border-radius: 8px; overflow-x: auto; }
+#plan svg, #patch svg { display: block; width: 100%; min-width: 640px; height: auto; }
+#plan .controls, #patch .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 12px 0 6px; }
 #plan button { font: 600 14px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); background: #fff; color: var(--rose-dark); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
 #plan button.step { padding: 4px 11px; }
 #plan button[aria-current="step"] { background: var(--rose-dark); color: #fff; }
 #plan button:disabled { opacity: 0.35; cursor: default; }
 #plan button:focus-visible { outline: 2px solid var(--bind); outline-offset: 2px; }
-#plan .say { min-height: 6.5em; max-width: 800px; margin: 4px auto 0; font-size: 15px; line-height: 1.55; }
+#plan .say, #patch .say { min-height: 6.5em; max-width: 800px; margin: 4px auto 0; font-size: 15px; line-height: 1.55; }
 #plan .say b.k { color: var(--kc); }
+#patch { max-width: 820px; margin: 10px auto 24px; }
+#patch svg { min-width: 520px; }
+#patch input[type=range] { width: min(420px, 100%); accent-color: var(--rose-dark); }
+#patch .say { min-height: 3.5em; }
+details.primer { border: 1px solid #e6d0d8; border-radius: 8px; margin: 1rem 0 1.2rem; background: #fffafc; }
+details.primer > summary { cursor: pointer; padding: 0.7rem 1rem; font-weight: 700; color: var(--rose-dark); list-style: none; }
+details.primer > summary::-webkit-details-marker { display: none; }
+details.primer > summary::before { content: "+"; display: inline-block; width: 1.2em; font-weight: 700; }
+details.primer[open] > summary::before { content: "\2212"; }
+details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline-offset: 2px; }
+.primer-body { padding: 0 1rem 1rem; }
+.primer-body .stage { background: #fff; border: 1px solid #eee; border-radius: 6px; overflow-x: auto; }
+.primer-body svg { display: block; width: 100%; min-width: 520px; height: auto; }
+.primer-body .controls { display: flex; justify-content: center; gap: 8px; margin: 10px 0 4px; }
+.primer-body .controls button { font: 600 14px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); background: #fff; color: var(--rose-dark); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+.primer-body .controls button:disabled { opacity: 0.35; cursor: default; }
+.primer-body .say { min-height: 4.5em; font-size: 15px; line-height: 1.55; }
 #plan .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; font-size: 13px; color: var(--muted); margin-top: 6px; }
 #plan .legend span::before { content: ""; display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: middle; background: var(--c); }
 @media (prefers-reduced-motion: no-preference) { #plan .fx { transition: opacity .35s ease; } }
@@ -102,12 +119,12 @@ figcaption { font-size: 13px; line-height: 1.5; text-align: left; max-width: 800
 
 <div class="card" style="max-width: 1020px;">
 <div class="card-block">
-<h3>How does a VLM decide what to describe next?</h3>
+<h3>How does an AI decide what to describe next?</h3>
 <p>
-When you ask a vision-language model what is in a picture, it names things one at a time, and it rarely names the same thing twice. But an image has no reading order. Nothing in a photo says which object comes first. So somewhere inside the model, something has to pick the next region to describe, and remember which regions it has already described.
+Show a picture to an AI model that can see, and ask it what is in it. It names things one at a time: a dog, then a cat, then a horse. It almost never names the same thing twice, and it rarely skips one. But a picture has no reading order. Nothing in a photo says the dog comes before the cat. So how does the model decide what to say next, and how does it remember what it has already said?
 </p>
 <p>
-In this paper, we find that the model <b>decides where to look before it looks</b>. A few groups of attention heads build pointers into the image, carry them to the token being written, read the region they point to, and keep track of how far the list has come. We trace each step with causal patching in Qwen3-VL, and show that the same plan runs on photographs, in other languages, and at every model size from 2B to 32B.
+We opened up one of these models and traced how it does this. We found that the model <b>decides where to look before it looks</b>. A few small teams of parts inside the model work together. One team finds the right places in the picture. Another carries those places to the moment the model is about to answer. A third looks back at the picture and reads what is there. And after every answer, the model keeps a simple bookmark of how far it has come.
 </p>
 </div><!--card-block-->
 </div><!--card-->
@@ -117,6 +134,7 @@ In this paper, we find that the model <b>decides where to look before it looks</
 <div class="row">
 <div class="col">
 
+<p class="text-center" style="margin-top: 30px">Click through the plan below, one step at a time. Further down, we explain each step and how we found it.</p>
 <figure id="plan" aria-label="Interactive walk-through of the plan">
   <div class="stage"><svg id="plan-svg" viewBox="0 0 1060 400" role="img" aria-label="Panel strip, question tokens, and answer tokens, with arrows for each step and the layers where it happens"></svg></div>
   <div class="controls">
@@ -133,95 +151,133 @@ In this paper, we find that the model <b>decides where to look before it looks</
   <div class="say" id="plan-say" aria-live="polite"></div>
 </figure>
 
-<h2>How does a model turn an image into a list?</h2>
-<p>A <b>vision-language model</b> (VLM) takes an image and a question and writes an answer in words. Ask one <i>"What animals are in this photo?"</i> and it names them one after another: a dog, a cat, a horse. It almost never names the same animal twice, and it rarely forgets one.</p>
-<p>That is less obvious than it sounds. An image has no reading order. Nothing in a photograph says the dog comes before the cat. Yet the answer comes out as a sequence of words, one at a time. So somewhere inside the model, something has to decide which part of the image to describe next, and remember which parts it has already described.</p>
-<p>To see where that could happen, it helps to know how the model sees its input. The image is cut into a grid of small square patches, and each patch becomes one <b>image token</b>. The question is cut into word pieces, and each piece becomes a <b>text token</b>. The model passes all of these tokens through a stack of layers. In each layer, <b>attention heads</b> let every token look at the tokens before it and pull information from them. The model writes its answer one token at a time, and each new token goes through the same stack.</p>
-<p>This last point creates a puzzle. The model has no notepad where it can write "I have named the dog" and update it after each answer. Each new token has to work out, from scratch, what has already been said. We wanted to know how it does that.</p>
-<p class="question">How does a VLM decide which part of an image to describe next, and how does it keep track of what it has already described?</p>
+<h2>How does an AI model see a picture and a question?</h2>
+<p>The models we study are called <b>vision-language models</b>. You give them a picture and a question, and they write an answer in words. Inside, they chop the picture and the question into small pieces called <b>tokens</b> and pass them up a stack of 36 <b>layers</b>. Small parts called <b>attention heads</b> let each token pull in information from the tokens before it. That is all you need to follow along. If you want to see how it works, open the two primers below.</p>
 
-<h2>Why a strip of panels?</h2>
-<p>Open-ended descriptions are hard to study. You can't control which objects the model will mention, or in what order. So we built a simple task where we control everything. Each image is a <b>strip of panels</b>. Each panel holds one shape with a letter written inside it. We ask the model for the letter inside a named shape.</p>
+<details class="primer" id="primer-transformer">
+<summary>Primer: how does a transformer work?</summary>
+<div class="primer-body">
+<p>Almost every modern AI model that writes text is a <b>transformer</b>. Click through to see what happens inside one.</p>
+<div class="stage"><svg id="tf-svg" viewBox="0 0 900 400" role="img" aria-label="Tokens at the bottom, layers stacked above them, with attention and MLP steps"></svg></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+<div class="say" aria-live="polite"></div>
+<p>A few words you will see on this page. Each token carries a <b>state</b> up the stack, a long list of numbers that holds what the model knows about that token so far (researchers call this the residual stream). <b>Attention</b> is the only step that moves information between tokens. An <b>MLP</b> works on each token by itself. And the model writes one token at a time: each new word is added to the end and goes through the whole stack again.</p>
+</div>
+</details>
+
+<details class="primer" id="primer-attention">
+<summary>Primer: what does an attention head do?</summary>
+<div class="primer-body">
+<p>Each layer of our model has 32 <b>attention heads</b>. A head sits at one token and decides which earlier tokens to read from. Here is one head at the word <span class="tok">star</span>, looking back at the panels of the picture.</p>
+<div class="stage"><svg id="att-svg" viewBox="0 0 860 330" role="img" aria-label="An attention head at the word star comparing its query with the keys of four image panels"></svg></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+<div class="say" aria-live="polite"></div>
+</div>
+</details>
+
+<p>The model writes its answer one token at a time, and every new token goes through the whole stack again. This creates a real puzzle. The model has no notepad. It can't write down "I already said dog" and look at it later. Every time it starts a new word, it has to work out again, from the words it has already written, what is left to say.</p>
+<p class="question">So how does the model pick the next thing to describe, and how does it keep track of what it has already described?</p>
+
+<h2>Why do we use a strip of panels instead of photos?</h2>
+<p>Photos are messy. We can't control which objects the model will mention, or in what order, so it is hard to test anything cleanly. Instead, we built a simple puzzle where we control everything. Each picture is a <b>strip of panels</b>. Each panel holds one shape, with a letter written inside it. We ask the model for the letter inside a named shape.</p>
 <div class="demo">
   <div class="strip" style="--n:4" data-strip="plus:R star:T heart:P circle:K" data-hit="1"></div>
   <div class="prompt">What is the letter inside the star? &nbsp;Answer: <span class="ans">T</span></div>
 </div>
-<p>We ask for a shape, not a panel number. To answer, the model has to find the shape in the image first, and only then read the letter. The same task has a list version. When the asked shape appears in several panels, we ask for the letter inside <i>each</i> heart, and the model lists them from left to right. This is the version where it has to keep track of what it has already written.</p>
+<p>Notice that we ask about a shape, not about "panel 2". To answer, the model first has to find where the star is, and only then read the letter. That gives us two separate jobs to look for inside the model: finding the place, and reading it.</p>
+<p>The puzzle also has a list version. When the same shape shows up in several panels, we ask for the letter inside <i>each</i> heart, and the model lists them from left to right. This is where it has to remember what it has already written.</p>
 <div class="demo">
   <div class="strip" style="--n:6" data-strip="heart:E diamond:M heart:U diamond:V heart:P heart:A" data-hit="0 2 4 5"></div>
   <div class="prompt">What is the letter inside each heart? &nbsp;Answer: <span class="ans">E, U, P, A</span></div>
 </div>
+<p>Later, we check that everything we find on these strips also happens on real photos.</p>
 
-<h2>How do we see what a hidden state means?</h2>
-<p>We use <b>activation patching</b>. We run the model on two inputs, a <b>source</b> and a <b>target</b>. We save one internal state from the source run and copy it into the target run, at the same layer and the same token. Everything else in the target run stays the same. Then we read off the answer the target gives.</p>
-<p>The trick is in how we build each pair. The source asks for the heart; the target asks for the star, in a different image. We arrange them so that every kind of information the copied state could carry leads the target to a <i>different letter</i>. The target's answer then tells us exactly what was in the state we copied.</p>
-<div class="demo">
-  <div class="pair">
-    <span class="lab">Source</span>
-    <div><div class="strip" style="--n:4" data-strip="star:G circle:C plus:Z heart:D" data-hit="3"></div><div class="prompt">...inside the heart? &nbsp;<span class="ans">D</span></div></div>
-    <span class="lab">Target</span>
-    <div><div class="strip" style="--n:4" data-strip="plus:R star:T heart:P circle:K" data-hit="1"></div><div class="prompt">...inside the star? &nbsp;<span class="ans">T</span></div></div>
-  </div>
-  <div class="outcomes">
-    <div><span class="L">T</span>Nothing moved. The target answers as before.</div>
-    <div><span class="L">D</span>The source's answer itself was copied.</div>
-    <div><span class="L">K</span>A <b>pointer</b> moved: "the answer is in panel 4", read in the target's image.</div>
-    <div><span class="L">P</span>The request moved: "look for a heart", answered in the target's image.</div>
-    <div><span class="L">R</span>The layout moved: the source's shapes, searched for a star.</div>
-  </div>
-  <figcaption>Five answers, five meanings. If the target says <span class="tok">K</span>, the copied state can't be the word "heart" (that gives <span class="tok">P</span>) or the letter <span class="tok">D</span>. It has to be a place in the image, which the target then reads in its own picture.</figcaption>
+<h2>How can we tell what the model is thinking?</h2>
+<p>We can't ask the model what it is thinking. But we can do something better. We can copy a token's state from one run of the model and paste it into another run, at the same token and the same layer, and see how the answer changes. This is called <b>activation patching</b>.</p>
+<p>Concretely, we run the model on two puzzles. The <b>source</b> run asks for the heart in one picture, and the <b>target</b> run asks for the star in a different picture. We paste one state from the source into the target and read the target's new answer. We design the two pictures so that each kind of information the state could carry makes the target say a different letter. So the letter tells us what was inside the state.</p>
+
+<details class="primer" id="primer-patching">
+<summary>Primer: how do five letters tell us five different things?</summary>
+<div class="primer-body">
+<div class="pair">
+  <span class="lab">Source</span>
+  <div><div class="strip" style="--n:4" data-strip="star:G circle:C plus:Z heart:D" data-hit="3"></div><div class="prompt">...inside the heart? &nbsp;<span class="ans">D</span></div></div>
+  <span class="lab">Target</span>
+  <div><div class="strip" style="--n:4" data-strip="plus:R star:T heart:P circle:K" data-hit="1"></div><div class="prompt">...inside the star? &nbsp;<span class="ans">T</span></div></div>
 </div>
+<p style="margin-top: 1rem">The source's heart sits in panel 4, and the target's star sits in panel 2. Every letter in the target means something different:</p>
+<div class="outcomes">
+  <div><span class="L">T</span>Nothing useful moved. The target answers its own question as before.</div>
+  <div><span class="L">D</span>The source's finished answer moved over.</div>
+  <div><span class="L">K</span>A <b>place</b> moved over: "look in panel 4". The target looked there in its own picture.</div>
+  <div><span class="L">P</span>The question moved over: "find the heart". The target found the heart in its own picture.</div>
+  <div><span class="L">R</span>The layout moved over: the target searched for its star among the source's shapes.</div>
+</div>
+<p style="margin-top: 1rem">One more check runs through every experiment. Whenever we paste a team of heads, we also paste the same number of heads picked at random from the same layers. If the random heads do nothing, the effect belongs to the team we found, not to pasting heads in general.</p>
+</div>
+</details>
 
-<h2>Binding: where does the model decide which panel to read?</h2>
-<p>We start broad. We copy the whole hidden state at the <span class="tok">:</span> after "Answer", the token where the model is about to write its answer, one layer at a time. In the early layers the target ignores the patch. In the middle layers, 23 to 29, it answers <span class="tok">K</span>: the state there holds a pointer to a panel, and the target follows it in its own image. In the last layers it simply copies <span class="tok">D</span>. So by the middle of the network, the model has already decided <i>where</i> the answer is, but has not yet read <i>what</i> it is.</p>
-<p>Where does that pointer come from? When we repeat the patch at every token of the question, one other token lights up: the shape word itself, <span class="tok">star</span>. Concretely, we then copy the output of one attention head at a time at the shape word, for every head in the model, and rank them by how often the target moves to <span class="tok">K</span>. A small set of 16 heads, in layers 15 to 21, does the job. Copying just these heads moves the pointer in most pairs, while the same number of random heads from the same layers does almost nothing. We call them <b>binding heads</b>, because they bind a word in the question to a place in the image.</p>
-<p>We can split their work further. A head looks for something with its <b>query</b> and finds it through the <b>keys</b> of the tokens it attends to. If we copy only the queries, the target looks for the source's shape in its own image and answers <span class="tok">P</span>. If we let the heads read only the source's image keys, the target looks for its own star in the source's layout and answers <span class="tok">R</span>. The query says <i>"I need a star"</i>, and the image keys say <i>"I am the panel with the star."</i> Copy both together, and the pointer itself moves.</p>
+<p>Try it yourself below. We paste the source's state at the last token before the answer, the colon after <i>"Answer"</i>. Drag the slider to choose the layer.</p>
+<figure id="patch" class="interactive" aria-label="Interactive demo of activation patching">
+  <div class="stage"><svg id="patch-svg" viewBox="0 0 900 460" role="img" aria-label="Two stacks of 36 layers, the source run and the target run, with a state copied from one to the other at the chosen layer"></svg></div>
+  <div class="controls">
+    <label for="patch-layer">Paste at layer <b id="patch-l">25</b></label>
+    <input type="range" id="patch-layer" min="0" max="35" value="25" step="1">
+  </div>
+  <div class="say" id="patch-say" aria-live="polite"></div>
+</figure>
+<p>Look at what happens as you move up. Low in the stack, pasting changes nothing. In the middle, around layers 23 to 29, the target answers <span class="tok">K</span>: the pasted state says <i>"the answer is in panel 4"</i>, and the target goes and reads its own panel 4. Near the top, the target simply copies the source's letter <span class="tok">D</span>. So halfway through, the model already knows <i>where</i> the answer is, but has not yet read <i>what</i> it is. We call that kind of "look here" note a <b>pointer</b>.</p>
+
+<h2>Binding: when does the model decide where to look?</h2>
+<p>If the colon already holds a pointer by the middle layers, the pointer must have been made somewhere before it. So we repeated the pasting at every token of the question, at every layer. Only one other token lit up: the shape word itself, <span class="tok">star</span>. The model works out where the star is while it is still reading the question.</p>
+<p>Next, we zoomed in on the attention heads at that word. Concretely, we pasted the output of just one attention head at a time, for every one of the model's 1,152 heads, and counted how often the target switched to <span class="tok">K</span>. A small team of 16 heads, in layers 15 to 21, did almost all the work. Pasting just those 16 moves the pointer most of the time. As a check, we also pasted 16 heads picked at random from the same layers, and they did almost nothing. We call the 16 heads <b>binding heads</b>, because they bind a word in the question to a place in the picture.</p>
+<p>We could even split their job in two. Remember that a head matches its <b>query</b>, what it is looking for, against the <b>keys</b> of the image tokens, the labels they carry. When we pasted only the queries, the target searched for a heart in its own picture and answered <span class="tok">P</span>. When we pasted only the image keys, the target searched for its own star among the source's shapes and answered <span class="tok">R</span>. When we pasted both, the pointer itself moved. In plain words, the head says <i>"I need a star"</i>, and the patches answer <i>"I am the panel with the star."</i></p>
 <figure class="center_image" style="margin-top: 30px">
-  <center><img src="images/paper/binding.png" style="width:100%; max-width:900px" alt="Residual patching at the colon by layer, the same patch at every token and layer, and per-head effects at the shape token."></center>
-  <figcaption><b>The pointer is resolved at the shape word by a few heads.</b> (a) Copying the source's state at <span class="tok">:</span>, one layer at a time. Early on the target keeps <span class="tok">T</span>; in layers 23 to 29 it answers <span class="tok">K</span>, its own letter at the source's panel; from layer 30 it copies <span class="tok">D</span>. (b) The same copy at every token and every layer. The pointer shows up only at the shape word, around layer 20, and at <span class="tok">:</span>, from layer 23. (c) Every attention head at the shape word, copied one at a time. The 16 outlined heads in layers 15 to 21 carry the pointer: <b>the model decides where to look while it is still reading the question.</b></figcaption>
+  <center><img src="images/paper/binding.png" style="width:100%; max-width:900px" alt="Three plots from the paper on where the pointer appears."></center>
+  <figcaption><b>Finding where the model decides where to look.</b> (a) Pasting at the colon, one layer at a time, as in the slider above. Each line is how often the target gives one of the five letters. The low layers keep <span class="tok">T</span>, the middle layers give <span class="tok">K</span>, and the top layers give <span class="tok">D</span>. (b) The same pasting at every token (across) and every layer (up and down). Darker means the pointer moved more often. Only two spots light up: the word <span class="tok">star</span> around layer 20, and the colon from layer 23 on. (c) Each small square is one attention head at the word <span class="tok">star</span>, pasted on its own. The 16 outlined heads, in layers 15 to 21, carry the pointer: <b>the model decides where to look while it is still reading the question.</b></figcaption>
 </figure>
 
-<h2>Relay: how does the pointer reach the answer?</h2>
-<p>The pointer is made at the shape word, but the answer is written several tokens later, at <span class="tok">:</span>. Attention is the only part of the model that moves information from one token to another, so some heads at <span class="tok">:</span> must fetch it.</p>
-<p>Concretely, we let each head at <span class="tok">:</span> read the source's information while still looking at the same tokens it normally looks at, and rank the heads by how often the target moves to <span class="tok">K</span>. Sixteen heads stand out. When we let them read one token at a time, they bring the pointer mostly from the shape word, exactly where the binding heads wrote it. We call them <b>relay heads</b>.</p>
-<p>Two tests tie the relay heads to the binding heads. If we block the relay heads from looking at the question, the model almost always loses its answer. And if we patch the binding heads in a separate run, then let <i>only</i> the relay heads in a clean target read from that run, the target follows the moved pointer as often as if we had patched the binding heads directly. Nothing else from the patched run gets through. So the relay heads alone carry the pointer from the question to the answer.</p>
+<h2>Relay: how does the pointer travel to the answer?</h2>
+<p>Here is a gap. The pointer is made at the word <span class="tok">star</span>, but the answer is written several tokens later, at the colon. Remember that attention heads are the only way information moves between tokens. So some heads at the colon must reach back to <span class="tok">star</span> and fetch the pointer.</p>
+<p>Concretely, we let one head at a time at the colon read from the source run instead of the target, and counted how often the target switched to <span class="tok">K</span>. Another team of 16 heads stood out. When we let these heads read from only one token at a time, they got the pointer mostly from <span class="tok">star</span>, exactly where the binding heads left it. We call them <b>relay heads</b>.</p>
+<p>Two more tests tie the teams together. If we stop the relay heads from looking at the question, the model almost always loses its answer. And here is the cleaner one: we move the pointer with the binding heads in a separate run, and then let <i>only</i> the relay heads of a fresh target read from that run. Nothing else gets through. The target still follows the moved pointer just as often. So the relay heads alone carry the pointer from the question to the answer.</p>
 
-<h2>Gaze: how does the model read the panel it pointed to?</h2>
-<p>At <span class="tok">:</span> the model holds a pointer, but the letter is still in the image. Some heads must take that pointer and look back at the right panel. We copy the <i>queries</i> of one head at a time at <span class="tok">:</span>, and find 32 heads, all after layer 19, that move the target to <span class="tok">K</span> when their queries are moved. We call them <b>gaze heads</b>.</p>
-<p>They behave just like a pointer being followed. Their queries carry the pointer, the image keys match it by place, and the image values bring back what is drawn there. If we let them read the source's image values instead, the target writes the source's letter. And if we patch the binding heads but hold the gaze heads' queries fixed, the moved pointer has no effect at all: it only works through them. Most of these heads also appear among the <a href="https://gaze.baulab.info/">Gaze Heads</a> we found in earlier work, by watching where a model looks while it narrates comics.</p>
+<h2>Gaze: how does the model read the panel it points to?</h2>
+<p>At the colon, the model now holds a pointer, but the letter is still sitting in the picture. Something has to follow the pointer back and read it. Concretely, we pasted only the query of one head at a time at the colon, and found 32 heads, all in the upper half of the model, that send the target to <span class="tok">K</span>. We call them <b>gaze heads</b>, because they decide where the model's gaze lands.</p>
+<p>They behave exactly like someone following directions. If we move the pointer with the binding heads but hold the gaze heads fixed, the moved pointer does nothing at all: it only works through them. And if we let the gaze heads look at the source's picture while following the target's pointer, the target reads out the source's letter. Many of these heads are the same ones we found in earlier work, <a href="https://gaze.baulab.info/">Gaze Heads</a>, by watching where a model looks while it narrates a comic.</p>
 
-<h2>Do gaze heads bring back a word, or an idea?</h2>
-<p>To find out, we drop the letters and ask about colored shapes instead: <i>"What shape is the green marker?"</i>, in English, German, French, or Chinese. The model answers in the language of the question.</p>
-<p>The gaze heads don't care about that language. What they bring back looks almost the same for one image asked in two languages, and very different for two images asked in one language. If we copy the gaze heads from a source that asks in French about another image, the target names the <i>source's</i> shape, but in its <i>own</i> language. So the gaze heads return a concept, not a word.</p>
-<p>The language comes from somewhere else. A separate set of 16 <b>language heads</b>, late in the model, carries the language of the question. Copy them, and the answer switches language while the shape stays the same. The last MLP layers then combine the two into the final word.</p>
+<h2>Do the gaze heads bring back a word, or an idea?</h2>
+<p>When the gaze heads read a panel, do they bring back the word for what they saw, or something more like the idea of it? To test this, we dropped the letters and asked about colored shapes instead, <i>"What shape is the green marker?"</i>, in English, German, French, and Chinese. The model always answers in the language of the question.</p>
+<p>The gaze heads don't care about that language. What they bring back looks almost the same for one picture asked in two languages, and very different for two pictures asked in one language. If we paste the gaze heads from a source that asks in French about another picture, the target names the <i>source's</i> shape, but in its <i>own</i> language. So the gaze heads bring back the idea, not the word.</p>
+<p>The language comes from somewhere else. A separate team of 16 <b>language heads</b>, near the top of the model, carries the language of the question. Paste them, and the answer switches language while the shape stays the same. The last few layers then put the idea and the language together into the final word.</p>
 <figure class="center_image" style="margin-top: 30px">
-  <center><img src="images/paper/gaze_language.png" style="width:100%; max-width:900px" alt="Per-head grid for gaze heads, comparison with published Gaze Heads, and per-head grid for language heads."></center>
-  <figcaption><b>Reading and translating are done by different heads.</b> (a) Copying one head's query at <span class="tok">:</span>; the 32 outlined gaze heads sit in layers 19 to 34. (b) Our gaze heads against the Gaze Heads published in earlier work. Our 32 heads move the pointer more often than the top 100 published heads, while random heads stay near zero. (c) Copying one head's output from a question in another language; the 16 outlined language heads switch the language of the answer without changing the shape. <b>The gaze heads bring back what is there; the language heads decide how to say it.</b></figcaption>
+  <center><img src="images/paper/gaze_language.png" style="width:100%; max-width:900px" alt="Three plots from the paper on gaze heads and language heads."></center>
+  <figcaption><b>Reading and translating are done by different teams.</b> (a) Each square is one attention head at the colon. Darker means pasting that head's query moved the pointer more often. The 32 outlined gaze heads all sit in the upper half, layers 19 to 34. (b) How often the target follows a moved pointer as we include more heads, for our gaze heads and for the Gaze Heads from our earlier work. Our 32 heads do better than that earlier work's top 100, and random heads do nothing. (c) The same kind of map for switching the answer's language. The 16 outlined language heads change the language without changing the shape. <b>One team brings back what is there, another decides how to say it.</b></figcaption>
 </figure>
 
-<h2>How does the model know where it is in a list?</h2>
-<p>Everything so far is about a single answer. Now ask for the letter in <i>each</i> heart. After writing <span class="tok">E,</span> the model must remember that the first heart is done and move on. Since the model has no running notepad, this <b>progress</b> has to be rebuilt at every token, from the letters it has already written.</p>
-<p>The only tokens that know what has been written are the answer letters and the commas after them. We copy the comma's state from a source that has written one letter into a target that has written none, and find that at layers 20 to 21 the target skips a panel it never answered from. The comma holds progress.</p>
-<p>But what form does that progress take? It could be a count ("two done"), a set ("panels 2 and 4 done"), or a position ("done up to panel 4"). We built pairs where each of these predicts a different letter. The answer is clear: progress is a position. The comma says <i>"done up to here"</i>, and the model moves to the next matching panel after that place.</p>
-<p>And who marks the place? The same binding heads. At each written letter, they bind that letter back to the panel it came from. If we move a written letter one panel to the right in the source image, keeping everything else the same, the target's next answer jumps one panel to the right too. The binding heads do the same job twice: once to tie the question to the image, and again to tie each answer to where it came from.</p>
+<h2>How does the model keep its place in a list?</h2>
+<p>So far the model gives one answer. Now ask for the letter in <i>each</i> heart. After it writes <span class="tok">E,</span> it has to know that the first heart is done and move on. And since it has no notepad, it has to work this out again from the letters it has already written.</p>
+<p>The only tokens that know what has been written are the letters themselves and the commas after them. So we pasted the comma from a source that had written one letter into a target that had written nothing. Around layers 20 to 21, the target skips a panel it never answered from. The comma carries the model's progress.</p>
+<p>But what does that progress look like? It could be a count, <i>"two done"</i>. It could be a list, <i>"panels 2 and 4 done"</i>. Or it could be a place, <i>"done up to panel 4"</i>. We built pairs of pictures where each of these would make the model say a different letter. The answer was clear: it is a place. The comma holds a <b>bookmark</b> that says <i>"done up to here"</i>, and the model moves on to the next matching panel after it.</p>
+<p>Who sets the bookmark? The same binding heads. At each written letter, they link the letter back to the panel it came from. If we quietly move a written letter one panel to the right in the source picture, the target's next answer also jumps one panel to the right. The binding heads do the same job twice: first they tie the question to the picture, then they tie each answer to the spot it came from.</p>
 <figure class="center_image" style="margin-top: 30px">
-  <center><img src="images/paper/relay_progress.png" style="width:100%; max-width:900px" alt="Relay heads reading one token at a time, and two layer sweeps of comma-state patches."></center>
-  <figcaption><b>The pointer travels to the answer, and the comma remembers how far the list has gone.</b> (a) Relay heads at <span class="tok">:</span>, allowed to read one token at a time, pick up the pointer mostly from the shape word. (b) Copying the comma's state from a source that has written one letter, one layer at a time. At layers 20 and 21 the target skips to its next panel, even though it never answered from the first. (c) A pair built so that a count, a set, and a position each predict a different letter. At layers 20 and 21 the target almost always picks the first match after panel 4: <b>progress is a place in the image, not a count.</b></figcaption>
+  <center><img src="images/paper/relay_progress.png" style="width:100%; max-width:900px" alt="Three plots from the paper on relay heads and the comma's bookmark."></center>
+  <figcaption><b>The pointer travels to the answer, and the comma remembers how far the list has gone.</b> (a) The relay heads at the colon, allowed to read only one token at a time. They pick up the pointer mostly from the word <span class="tok">star</span>. (b) Pasting the comma from a source that has written one letter, one layer at a time. At layers 20 and 21 the target skips ahead to its next panel, even though it never answered from the first. (c) A pair built so that a count, a list, and a place each predict a different letter. At layers 20 and 21 the target almost always picks the first match after panel 4: <b>progress is a place in the picture, not a count.</b></figcaption>
 </figure>
-<p>Finally, the model has to pick the next panel. We can watch that choice without any patch, by writing the letters out of order for it. With only the second heart written, it goes on to the third. With only the last one written, it goes back to the earliest one it skipped. The rule is simple: take the nearest unwritten panel after the place where the list stopped, and go back only when nothing is left to the right. When nothing is left at all, the same step decides to stop.</p>
+<p>Last comes the choice of what to read next. We can watch it without pasting anything, just by handing the model letters out of order. With only the second heart written, it goes on to the third. With only the last heart written, it goes back for the earliest one it skipped. The rule is simple: take the nearest unread panel after the bookmark, and go back only when nothing is left ahead. When nothing is left at all, the same step tells the model to stop.</p>
 
-<h2>Does this hold outside the strips?</h2>
-<p>Strips of panels are a clean lab, but a real VLM describes photographs. On COCO photos with ordinary questions like <i>"What animals are in this image?"</i>, the gaze heads look ahead at the object the model is about to name, and if we block the comma from seeing an object already named, the model names it again. Setting the language heads to their English values turns non-English answers into English. The binding, relay, and gaze heads also show up in every Qwen3-VL size we tested, from 2B to 32B parameters.</p>
+<h2>Does this happen on real photos too?</h2>
+<p>A strip of panels is a clean lab, but people ask about real photos. So we asked the model ordinary questions about everyday photos, like <i>"What animals are in this image?"</i>. The gaze heads look ahead at the animal the model is about to name. If we stop the comma from seeing an animal that was already named, the model names it again. Setting the language heads to English turns answers in other languages into English. And the binding, relay, and gaze teams show up in every size of this model we tried, from 2 billion to 32 billion parameters.</p>
 
-<h2>Limitations</h2>
-<p>Most of our causal tests use the synthetic strips, where we control every panel. On photographs we can show that the same heads matter, but we can't build pairs as clean as on the strips. The choice of the next panel is also spread over several layers. We can locate it and edit it through the comma, but unlike binding, relay, gaze, and language, we found no small set of heads that makes it. On the largest model, the binding work is spread over more heads than on the 8B. And the language heads hold up on the mid-sized models but not on every size.</p>
-<p>For the full set of experiments, controls, and numbers, see our paper.</p>
+<h2>What are the limitations?</h2>
+<p>Most of our careful tests use the panel strips, where we control every detail. On photos we can show that the same teams matter, but we can't build pairs that are as clean. We also didn't find a small team that makes the final choice of the next panel. That choice is spread over several layers. We can find it and change it through the comma, but not pin it to a few heads the way we can for the other steps. On the largest model, the binding work is spread over more heads. And the language heads hold up on the middle-sized models, but not on every size.</p>
+<p>For all the experiments, checks, and numbers, see our paper.</p>
 
 <h2>How does this connect to earlier work?</h2>
-<p>Language models keep track of which entity goes with which attribute through <b>binding</b>. Feng and Steinhardt (ICLR 2024) showed that a language model tags each entity in a prompt with an abstract code and later follows that code to retrieve it, and Prakash et al. (ICLR 2026) showed how models use such lookbacks to track beliefs in a story.</p>
-<p>Language models also handle lists by content. <a href="https://openreview.net/forum?id=iPFlJESrsh">Filter heads</a> (Sen Sharma et al., ICLR 2026) attend to the items of a list that match a rule carried in their queries. Our binding heads do something similar over image panels.</p>
-<p>In vision-language models, Assouel et al. (ICLR 2026) found that the words of a prompt build spatial indexes to the matching image regions. Our own earlier work on <a href="https://gaze.baulab.info/">Gaze Heads</a> found a small set of heads that attend to the region being described, so that redirecting them redirects the description.</p>
-<p>These works explain how a model finds one region that answers a question. This project shows how the same parts work together when the answer is a list, and adds what was missing: how the model tracks its progress through the image and picks the next region.</p>
+<p>Earlier work found pieces of this picture in text-only models. Language models keep track of which thing goes with which detail by tagging each thing with a hidden label and following that label later (Feng and Steinhardt, 2024). They use a similar trick to follow who believes what in a story (Prakash et al., 2026). And they handle lists with <a href="https://openreview.net/forum?id=iPFlJESrsh">filter heads</a> (Sen Sharma et al., 2026), heads that pick out the items of a list that match a rule. Our binding heads do something similar over the panels of a picture.</p>
+<p>In models that see pictures, Assouel et al. (2026) found that the words of a question build an index of matching places in the picture. Our own earlier work on <a href="https://gaze.baulab.info/">Gaze Heads</a> found heads that look at the part of a picture being described, so that turning them turns the description.</p>
+<p>These works explain how a model finds one place that answers a question. Here we show how these parts work together when the answer is a list, and we add the missing piece: how the model keeps its place in the picture and chooses what to read next.</p>
+
 
 <h2>How to cite</h2>
 
@@ -312,23 +368,23 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
   // Each step: shown output count, tinted panels, arrows, cursor position, text.
   var STEPS = [
     { name: "Task", out: 0, tint: [], arrows: [], cursor: null,
-      say: 'We show the model a strip of six panels and ask <i>"What is the letter inside each heart?"</i> The right answer is <span class="tok">E, U, P, A</span>, read from left to right. Click <b>Next</b> to watch how the model plans it.' },
+      say: 'We show the model a strip of six panels and ask <i>"What is the letter inside each heart?"</i> The right answer is <span class="tok">E, U, P, A</span>, from left to right. Click <b>Next</b> to see how the model plans it. The bars on the right show where each step happens in the model\'s stack of 36 layers, from the bottom up.' },
     { name: "1 Binding", out: 0, tint: [0, 2, 4, 5], arrows: [["t2p", HEART, 0, "bind"], ["t2p", HEART, 2, "bind"], ["t2p", HEART, 4, "bind"], ["t2p", HEART, 5, "bind"]], cursor: null,
-      say: '<b class="k" style="--kc:' + C.bind + '">Binding.</b> While the model is still reading the question, at the word <span class="tok">heart</span>, 16 <b>binding heads</b> in layers 15 to 21 match the word against the image. They turn it into pointers to every panel that holds a heart. Nothing has been written yet.' },
+      say: '<b class="k" style="--kc:' + C.bind + '">Binding.</b> While the model is still reading the question, at the word <span class="tok">heart</span>, a small team of 16 attention heads, the <b>binding heads</b>, matches the word against the picture. They mark every panel that holds a heart. This happens about halfway up the model, in layers 15 to 21, before anything has been written.' },
     { name: "2 Relay", out: 0, tint: [0, 2, 4, 5], arrows: [["t2t", HEART, COLON, "relay"]], cursor: null,
-      say: '<b class="k" style="--kc:' + C.relay + '">Relay.</b> The answer is written at <span class="tok">:</span>, a few tokens later. 16 <b>relay heads</b> at <span class="tok">:</span> fetch the pointers from <span class="tok">heart</span> and bring them over. Block these heads, and the model loses its answer.' },
+      say: '<b class="k" style="--kc:' + C.relay + '">Relay.</b> The answer gets written a few tokens later, at the colon. Another team of 16 heads, the <b>relay heads</b>, reaches back to <span class="tok">heart</span> and carries the marked panels over to the colon.' },
     { name: "3 Gaze", out: 1, tint: [0], arrows: [["t2p", COLON, 0, "gaze"]], cursor: null,
-      say: '<b class="k" style="--kc:' + C.gaze + '">Gaze.</b> At <span class="tok">:</span>, 32 <b>gaze heads</b> follow the first pointer back into the image and read what is drawn in that panel. What they bring back is the letter itself, and the model writes <span class="tok">E</span>.' },
+      say: '<b class="k" style="--kc:' + C.gaze + '">Gaze.</b> At the colon, a team of 32 <b>gaze heads</b> follows the first mark back into the picture and reads what is inside that panel. The model writes <span class="tok">E</span>.' },
     { name: "4 Progress", out: 2, tint: [0], arrows: [["t2p", ans(0), 0, "bind"]], cursor: 0,
-      say: '<b class="k" style="--kc:' + C.prog + '">Progress.</b> The model has no notepad, so it rebuilds its progress at every token. At the written <span class="tok">E</span>, the same binding heads tie the letter back to the panel it came from. By layers 20 to 21, the comma holds a place in the image: <i>done up to panel 1</i>.' },
+      say: '<b class="k" style="--kc:' + C.prog + '">Progress.</b> The model keeps no notes between words, so it works out its progress again at every step. At the written <span class="tok">E</span>, the binding heads link the letter back to the panel it came from. By layers 20 to 21, the comma holds a bookmark: <i>done up to panel 1</i>.' },
     { name: "5 Select", out: 3, tint: [2], arrows: [["t2p", comma(0), 2, "gaze"]], cursor: 0,
-      say: '<b class="k" style="--kc:' + C.prog + '">Select.</b> At the comma, the model takes the nearest heart <i>after</i> the place where the list stopped, panel 3. The gaze heads read it, and the model writes <span class="tok">U</span>.' },
+      say: '<b class="k" style="--kc:' + C.prog + '">Select.</b> At the comma, the model picks the nearest heart <i>after</i> the bookmark, panel 3. The gaze heads read it, and the model writes <span class="tok">U</span>.' },
     { name: "6 Repeat", out: 5, tint: [4], arrows: [["t2p", ans(1), 2, "bind"], ["t2p", comma(1), 4, "gaze"]], cursor: 2,
-      say: 'The same two steps repeat. The binding heads tie <span class="tok">U</span> to panel 3, the comma moves the place to <i>done up to panel 3</i>, and the model selects panel 5 and writes <span class="tok">P</span>.' },
+      say: 'The same two steps repeat. The binding heads link <span class="tok">U</span> to panel 3, the bookmark moves to <i>done up to panel 3</i>, and the model picks panel 5 and writes <span class="tok">P</span>.' },
     { name: "Repeat", out: 7, tint: [5], arrows: [["t2p", ans(2), 4, "bind"], ["t2p", comma(2), 5, "gaze"]], cursor: 4,
-      say: 'Once more: <span class="tok">P</span> is tied to panel 5, the list is done up to panel 5, and the next heart is panel 6. The model writes <span class="tok">A</span>.' },
+      say: 'Once more: <span class="tok">P</span> is linked to panel 5, the bookmark moves to panel 5, and the next heart is panel 6. The model writes <span class="tok">A</span>.' },
     { name: "Stop", out: 8, tint: [], arrows: [["t2p", ans(3), 5, "bind"]], cursor: 5,
-      say: 'After <span class="tok">A</span>, the list is done up to panel 6, and no heart is left after it. The same select step now decides to stop, and the model ends its answer. The whole plan was rebuilt from the written tokens at every step.' }
+      say: 'After <span class="tok">A</span>, the bookmark sits at panel 6, and no heart is left after it. The same step now tells the model to stop. Notice that the whole plan was rebuilt from the written letters at every step.' }
   ];
 
   function el(tag, attrs, text) {
@@ -469,6 +525,246 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
     if (e.key === "ArrowLeft") back();
   });
   show(0);
+})();
+
+/* Activation patching demo: two stacks of 36 layers, paste the source's state into the target at one layer. */
+(function () {
+  var NS = "http://www.w3.org/2000/svg";
+  var svg = document.getElementById("patch-svg");
+  if (!svg) return;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var SX = 250, TX = 650, W = 150, BOTTOM = 352, H = 8;
+  function ly(l) { return BOTTOM - (l + 1) * H; }          // top edge of layer l, layer 0 at the bottom
+  function el(tag, attrs, text) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  var FONT = "Open Sans, sans-serif";
+
+  function tower(cx, title, strip, question, answer) {
+    svg.appendChild(el("text", { x: cx, y: 18, "text-anchor": "middle", "font-size": "15", "font-weight": "700", fill: "#3A1D2A", "font-family": FONT }, title));
+    var slabs = [];
+    for (var l = 0; l < 36; l++) {
+      var r = el("rect", { x: cx - W / 2, y: ly(l), width: W, height: H - 1.5, rx: 1.5, fill: "#ece9eb" });
+      svg.appendChild(r); slabs.push(r);
+    }
+    // the picture and question go in at the bottom
+    strip.forEach(function (p, i) {
+      var x = cx - 2 * 34 + i * 34;
+      svg.appendChild(el("rect", { x: x, y: 364, width: 34, height: 34, fill: "#fff", stroke: "#222", "stroke-width": "1.2" }));
+      var g = el("g", { transform: "translate(" + (x + 2) + ",366) scale(0.3)" });
+      g.innerHTML = shapeSVG(p[0], p[1]);
+      svg.appendChild(g);
+    });
+    svg.appendChild(el("text", { x: cx, y: 420, "text-anchor": "middle", "font-size": "13", fill: "#333", "font-family": "JetBrains Mono, Menlo, monospace" }, question));
+    // the answer comes out at the top
+    var bubble = el("circle", { cx: cx, cy: 46, r: 17, fill: "#F6D5DF", stroke: "#8C3B5A", "stroke-width": "1.5" });
+    var letter = el("text", { x: cx, y: 52, "text-anchor": "middle", "font-size": "18", "font-weight": "700", fill: "#3A1D2A", "font-family": FONT }, answer);
+    svg.appendChild(bubble); svg.appendChild(letter);
+    svg.appendChild(el("line", { x1: cx, y1: ly(35) - 2, x2: cx, y2: 64, stroke: "#bbb", "stroke-width": "1.5" }));
+    return { slabs: slabs, bubble: bubble, letter: letter };
+  }
+  var src = tower(SX, "Source run", [["star", "G"], ["circle", "C"], ["plus", "Z"], ["heart", "D"]], "...inside the heart? Answer:", "D");
+  var tgt = tower(TX, "Target run", [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]], "...inside the star? Answer:", "T");
+
+  // layer numbers between the two stacks
+  [0, 10, 20, 30, 35].forEach(function (l) {
+    svg.appendChild(el("text", { x: 450, y: ly(l) + 6, "text-anchor": "middle", "font-size": "11", fill: "#6b6b6b", "font-family": FONT }, "layer " + l));
+  });
+  svg.appendChild(el("text", { x: 450, y: 448, "text-anchor": "middle", "font-size": "12", fill: "#6b6b6b", "font-family": FONT }, "picture and question go in at the bottom, the answer comes out at the top"));
+
+  var chip = el("rect", { width: 34, height: 12, rx: 3, fill: "#8C3B5A", opacity: 0 });
+  svg.appendChild(chip);
+
+  var RESULTS = [
+    { upTo: 20, a: "T", say: 'Nothing changes. The target still answers <span class="tok">T</span>. This low in the stack, the colon holds nothing the target can use.' },
+    { upTo: 22, a: "T/K", say: 'In between. The answer is starting to change from <span class="tok">T</span> to <span class="tok">K</span>, as the pointer forms in the layers just above.' },
+    { upTo: 29, a: "K", say: 'The target answers <span class="tok">K</span>, the letter in its own panel 4. The pasted state carried a <b>place</b>, "look in panel 4", and the target read its own picture there.' },
+    { upTo: 35, a: "D", say: 'The target answers <span class="tok">D</span>, the source\'s own letter. By now the model has already read the panel, so we pasted the finished answer.' }
+  ];
+  var slider = document.getElementById("patch-layer"), num = document.getElementById("patch-l"), say = document.getElementById("patch-say");
+  var lit = -1, raf = null;
+  function update() {
+    var L = +slider.value;
+    num.textContent = L;
+    if (lit >= 0) { src.slabs[lit].setAttribute("fill", "#ece9eb"); tgt.slabs[lit].setAttribute("fill", "#ece9eb"); }
+    lit = L;
+    src.slabs[L].setAttribute("fill", "#8C3B5A");
+    var res = RESULTS.filter(function (r) { return L <= r.upTo; })[0];
+    say.innerHTML = '<b>Pasting at layer ' + L + '.</b> ' + res.say;
+    var x0 = SX + W / 2, x1 = TX - W / 2 - 34, y = ly(L) - 2;
+    function land() {
+      chip.setAttribute("opacity", 0);
+      tgt.slabs[L].setAttribute("fill", "#8C3B5A");
+      tgt.letter.textContent = res.a;
+      tgt.letter.setAttribute("font-size", res.a.length > 1 ? "12" : "18");
+      tgt.bubble.setAttribute("fill", res.a === "T" ? "#F6D5DF" : "#8C3B5A");
+      tgt.letter.setAttribute("fill", res.a === "T" ? "#3A1D2A" : "#ffffff");
+    }
+    cancelAnimationFrame(raf);
+    if (reduce) { land(); return; }
+    tgt.slabs.forEach(function (s) { s.setAttribute("fill", "#ece9eb"); });
+    var t0 = null;
+    chip.setAttribute("opacity", 1);
+    (function step(t) {
+      if (t0 === null) t0 = t;
+      var k = Math.min(1, (t - t0) / 650), e = k * k * (3 - 2 * k);
+      chip.setAttribute("x", x0 + (x1 - x0) * e);
+      chip.setAttribute("y", y - 40 * Math.sin(Math.PI * e));
+      if (k < 1) raf = requestAnimationFrame(step); else land();
+    })(performance.now());
+  }
+  slider.addEventListener("input", update);
+  update();
+})();
+
+/* Primer animations. Each one is a list of frames; Back, Next, and Play step through them. */
+function makeStepper(root, frames, draw) {
+  var at = 0, timer = null, say = root.querySelector(".say");
+  var btn = function (a) { return root.querySelector('[data-act="' + a + '"]'); };
+  function show(n) {
+    at = Math.max(0, Math.min(frames.length - 1, n));
+    draw(at);
+    say.innerHTML = frames[at];
+    btn("prev").disabled = at === 0;
+    btn("next").disabled = at === frames.length - 1;
+  }
+  function stop() { clearTimeout(timer); timer = null; btn("play").textContent = "Play"; }
+  function play() {
+    if (timer) { stop(); return; }
+    if (at === frames.length - 1) show(0);
+    btn("play").textContent = "Pause";
+    (function tick() { timer = setTimeout(function () { if (at < frames.length - 1) { show(at + 1); tick(); } else stop(); }, 2600); })();
+  }
+  btn("prev").addEventListener("click", function () { stop(); show(at - 1); });
+  btn("next").addEventListener("click", function () { stop(); show(at + 1); });
+  btn("play").addEventListener("click", play);
+  show(0);
+}
+function svgEl(tag, attrs, text) {
+  var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (var k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+/* Primer 1: a transformer, drawn as token columns going up through layers. */
+(function () {
+  var svg = document.getElementById("tf-svg"); if (!svg) return;
+  var F = "Open Sans, sans-serif", ROSE = "#8C3B5A", BLUE = "#0072B2", GREEN = "#009E73";
+  var TOK = ["patch", "patch", "patch", "What", "is", "in", "this", "photo?"];
+  function cx(i) { return 150 + i * 88; }
+  var groups = {};
+  function layer(name) { var g = svgEl("g", { opacity: 0 }); svg.appendChild(g); groups[name] = g; return g; }
+
+  // running state lines
+  var lines = layer("lines");
+  TOK.forEach(function (t, i) { lines.appendChild(svgEl("line", { x1: cx(i), y1: 338, x2: cx(i), y2: 92, stroke: ROSE, "stroke-width": 3, opacity: 0.35 })); });
+  // layer labels
+  [["layer 1", 300], ["layer 2", 210], ["layer 36", 112]].forEach(function (l) {
+    svg.appendChild(svgEl("text", { x: 20, y: l[1], "font-size": 13, fill: "#6b6b6b", "font-family": F }, l[0]));
+  });
+  svg.appendChild(svgEl("text", { x: 470, y: 150, "text-anchor": "middle", "font-size": 14, fill: "#6b6b6b", "font-family": F }, "· · ·   33 more layers   · · ·"));
+  // tokens
+  TOK.forEach(function (t, i) {
+    var patch = t === "patch";
+    svg.appendChild(svgEl("rect", { x: cx(i) - 36, y: 342, width: 72, height: 32, rx: 5, fill: patch ? "#e8f1f8" : "#f4f4f4", stroke: patch ? "#9bc3e0" : "#ccc" }));
+    svg.appendChild(svgEl("text", { x: cx(i), y: 363, "text-anchor": "middle", "font-size": 13, fill: "#333", "font-family": "JetBrains Mono, Menlo, monospace" }, patch ? "▦ patch" : t));
+  });
+  svg.appendChild(svgEl("text", { x: cx(1), y: 394, "text-anchor": "middle", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "picture tokens"));
+  svg.appendChild(svgEl("text", { x: cx(5), y: 394, "text-anchor": "middle", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "question tokens"));
+
+  function attention(name, y, pairs) {
+    var g = layer(name);
+    pairs.forEach(function (p) {
+      var a = cx(p[0]), b = cx(p[1]), h = 18 + Math.abs(b - a) * 0.08;
+      g.appendChild(svgEl("path", { d: "M" + a + "," + y + " Q" + (a + b) / 2 + "," + (y - h) + " " + (b - 4) + "," + (y - 2), fill: "none", stroke: BLUE, "stroke-width": 2.2, "marker-end": "url(#tf-ah)" }));
+    });
+    g.appendChild(svgEl("text", { x: 812, y: y - 4, "text-anchor": "start", "font-size": 12, "font-weight": 700, fill: BLUE, "font-family": F }, "attention"));
+  }
+  function mlp(name, y) {
+    var g = layer(name);
+    TOK.forEach(function (t, i) { g.appendChild(svgEl("rect", { x: cx(i) - 26, y: y, width: 52, height: 18, rx: 4, fill: GREEN, opacity: 0.85 })); });
+    g.appendChild(svgEl("text", { x: 812, y: y + 13, "text-anchor": "start", "font-size": 12, "font-weight": 700, fill: GREEN, "font-family": F }, "MLP"));
+  }
+  var defs = svgEl("defs", {}), m = svgEl("marker", { id: "tf-ah", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto" });
+  m.appendChild(svgEl("path", { d: "M0,0 L10,5 L0,10 z", fill: BLUE })); defs.appendChild(m); svg.appendChild(defs);
+  attention("att1", 318, [[0, 7], [1, 7], [2, 7], [3, 4], [4, 6]]);
+  mlp("mlp1", 268);
+  attention("att2", 236, [[1, 7], [3, 7], [5, 6], [0, 3]]);
+  mlp("mlp2", 186);
+  var out = layer("out");
+  out.appendChild(svgEl("line", { x1: cx(7), y1: 92, x2: cx(7), y2: 64, stroke: ROSE, "stroke-width": 3 }));
+  out.appendChild(svgEl("rect", { x: cx(7) - 70, y: 22, width: 140, height: 40, rx: 20, fill: "#F6D5DF", stroke: ROSE, "stroke-width": 1.5 }));
+  out.appendChild(svgEl("text", { x: cx(7), y: 47, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": F }, "next word: dog"));
+
+  var SHOW = [[], ["lines"], ["lines", "att1"], ["lines", "att1", "mlp1"], ["lines", "att1", "mlp1", "att2", "mlp2"], ["lines", "att1", "mlp1", "att2", "mlp2", "out"]];
+  var FRAMES = [
+    'The picture is cut into small square patches, and the question into word pieces. Each piece is a <b>token</b>. Here we draw three picture tokens and five word tokens. A real photo has a few hundred.',
+    'Each token carries a <b>state</b> up the stack, a running note of what the model knows about it so far. Every layer reads this note and adds to it.',
+    '<b>Attention</b> (blue): each token looks back at earlier tokens and copies what it needs. Here the word <span class="tok">photo?</span> reads from the picture. This is the only way information moves between tokens, and a token can never look ahead.',
+    '<b>MLP</b> (green): then each token works on its own note, by itself, without looking at any other token. A lot of what the model has memorized lives here.',
+    'The next layer does the same two steps, and so does every layer after it. Our model has 36 layers, each with its own attention and its own MLP.',
+    'At the top, the state of the last token becomes the next word. The model writes it, adds it to the end of the row, and runs the whole stack again for the word after.'
+  ];
+  makeStepper(document.getElementById("primer-transformer"), FRAMES, function (n) {
+    Object.keys(groups).forEach(function (k) { groups[k].setAttribute("opacity", SHOW[n].indexOf(k) >= 0 ? 1 : 0); });
+  });
+})();
+
+/* Primer 2: one attention head at the word "star", matching its query against the panels' keys. */
+(function () {
+  var svg = document.getElementById("att-svg"); if (!svg) return;
+  var F = "Open Sans, sans-serif", ROSE = "#8C3B5A", BLUE = "#0072B2";
+  var P = [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]];
+  var SCORE = [0.08, 0.9, 0.05, 0.03];                     // a cartoon, not measured values
+  function px(i) { return 70 + i * 100; }
+  var groups = {};
+  function layer(name) { var g = svgEl("g", { opacity: 0 }); svg.appendChild(g); groups[name] = g; return g; }
+  P.forEach(function (p, i) {
+    svg.appendChild(svgEl("rect", { x: px(i), y: 150, width: 100, height: 100, fill: "#fff", stroke: "#222", "stroke-width": 1.5 }));
+    var g = svgEl("g", { transform: "translate(" + (px(i) + 10) + ",160) scale(0.8)" }); g.innerHTML = shapeSVG(p[0], p[1]); svg.appendChild(g);
+  });
+  svg.appendChild(svgEl("text", { x: px(2), y: 300, "text-anchor": "middle", "font-size": 13, fill: "#6b6b6b", "font-family": F }, "picture tokens (one per panel, to keep it simple)"));
+  svg.appendChild(svgEl("rect", { x: 660, y: 182, width: 120, height: 36, rx: 6, fill: "#F6D5DF", stroke: ROSE }));
+  svg.appendChild(svgEl("text", { x: 720, y: 206, "text-anchor": "middle", "font-size": 16, "font-family": "JetBrains Mono, Menlo, monospace", fill: "#3A1D2A" }, "star"));
+  svg.appendChild(svgEl("text", { x: 720, y: 240, "text-anchor": "middle", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "the head sits here"));
+
+  var q = layer("query");
+  q.appendChild(svgEl("rect", { x: 630, y: 110, width: 180, height: 46, rx: 10, fill: "#fff", stroke: ROSE, "stroke-width": 1.5 }));
+  q.appendChild(svgEl("text", { x: 720, y: 130, "text-anchor": "middle", "font-size": 12, fill: ROSE, "font-weight": 700, "font-family": F }, "query"));
+  q.appendChild(svgEl("text", { x: 720, y: 147, "text-anchor": "middle", "font-size": 13, fill: "#333", "font-family": F }, "I am looking for a star"));
+  var k = layer("keys");
+  P.forEach(function (p, i) {
+    k.appendChild(svgEl("text", { x: px(i) + 50, y: 270, "text-anchor": "middle", "font-size": 12, fill: BLUE, "font-weight": 700, "font-family": F }, "key: a " + p[0]));
+  });
+  var s = layer("scores");
+  P.forEach(function (p, i) {
+    var h = 10 + 90 * SCORE[i];
+    s.appendChild(svgEl("rect", { x: px(i) + 30, y: 140 - h, width: 40, height: h, fill: ROSE, opacity: 0.25 + 0.75 * SCORE[i] }));
+  });
+  s.appendChild(svgEl("text", { x: px(0), y: 22, "font-size": 12, fill: "#6b6b6b", "font-family": F }, "how much attention each token gets"));
+  var v = layer("value");
+  v.appendChild(svgEl("path", { d: "M" + (px(1) + 70) + ",40 C 420,10 600,150 654,196", fill: "none", stroke: ROSE, "stroke-width": 3, "marker-end": "url(#att-ah)" }));
+  v.appendChild(svgEl("rect", { x: 420, y: 6, width: 190, height: 28, rx: 14, fill: ROSE }));
+  v.appendChild(svgEl("text", { x: 515, y: 25, "text-anchor": "middle", "font-size": 13, fill: "#fff", "font-weight": 700, "font-family": F }, "value: \"I am panel 2\""));
+  var defs = svgEl("defs", {}), m = svgEl("marker", { id: "att-ah", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto" });
+  m.appendChild(svgEl("path", { d: "M0,0 L10,5 L0,10 z", fill: ROSE })); defs.appendChild(m); svg.appendChild(defs);
+
+  var SHOW = [[], ["query"], ["query", "keys"], ["query", "keys", "scores"], ["query", "keys", "scores", "value"], ["query", "keys", "scores", "value"]];
+  var FRAMES = [
+    'An attention head sits at one token, here the word <span class="tok">star</span>. It can read from any earlier token, including the picture.',
+    'First, the head forms a <b>query</b>: a short description of what it is looking for. Here, <i>"a star"</i>.',
+    'Every earlier token shows a <b>key</b>: a short label of what it holds. Each panel\'s key says which shape it has.',
+    'The head compares its query with every key. The best match gets almost all of its attention. (These bars are a cartoon, not measured values.)',
+    'From the tokens it attends to, the head copies a <b>value</b>: the information those tokens carry. Here, where the star is. The copy is added to the state of the word <span class="tok">star</span>.',
+    'So a head is a small search: the <b>query</b> asks, the <b>keys</b> answer, and the <b>value</b> is what gets copied. The model has 1,152 heads in all, each searching for something different. In this project we find small teams of them that do one job each.'
+  ];
+  makeStepper(document.getElementById("primer-attention"), FRAMES, function (n) {
+    Object.keys(groups).forEach(function (k) { groups[k].setAttribute("opacity", SHOW[n].indexOf(k) >= 0 ? 1 : 0); });
+  });
 })();
 </script>
 </html>
