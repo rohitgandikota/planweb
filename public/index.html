@@ -323,7 +323,7 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
       say: '<b class="k" style="--kc:' + C.prog + '">Progress.</b> The model has no notepad, so it rebuilds its progress at every token. At the written <span class="tok">E</span>, the same binding heads tie the letter back to the panel it came from. By layers 20 to 21, the comma holds a place in the image: <i>done up to panel 1</i>.' },
     { name: "5 Select", out: 3, tint: [2], arrows: [["t2p", comma(0), 2, "gaze"]], cursor: 0,
       say: '<b class="k" style="--kc:' + C.prog + '">Select.</b> At the comma, the model takes the nearest heart <i>after</i> the place where the list stopped, panel 3. The gaze heads read it, and the model writes <span class="tok">U</span>.' },
-    { name: "Repeat", out: 5, tint: [4], arrows: [["t2p", ans(1), 2, "bind"], ["t2p", comma(1), 4, "gaze"]], cursor: 2,
+    { name: "6 Repeat", out: 5, tint: [4], arrows: [["t2p", ans(1), 2, "bind"], ["t2p", comma(1), 4, "gaze"]], cursor: 2,
       say: 'The same two steps repeat. The binding heads tie <span class="tok">U</span> to panel 3, the comma moves the place to <i>done up to panel 3</i>, and the model selects panel 5 and writes <span class="tok">P</span>.' },
     { name: "Repeat", out: 7, tint: [5], arrows: [["t2p", ans(2), 4, "bind"], ["t2p", comma(2), 5, "gaze"]], cursor: 4,
       say: 'Once more: <span class="tok">P</span> is tied to panel 5, the list is done up to panel 5, and the next heart is panel 6. The model writes <span class="tok">A</span>.' },
@@ -415,15 +415,24 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
 
   var stepsBox = document.getElementById("plan-steps"), say = document.getElementById("plan-say");
   var prev = document.getElementById("plan-prev"), next = document.getElementById("plan-next");
-  var btns = STEPS.map(function (s, i) {
+  var REPEAT = 6;                                  // the last three frames play as one step
+  var btns = STEPS.slice(0, REPEAT + 1).map(function (s, i) {
     var b = document.createElement("button");
     b.type = "button"; b.className = "step"; b.textContent = s.name;
-    b.addEventListener("click", function () { show(i); });
+    b.addEventListener("click", function () { go(i); });
     stepsBox.appendChild(b); return b;
   });
-  var at = 0;
+  var at = 0, timer = null;
+  function go(n) {
+    clearTimeout(timer);
+    n = Math.max(0, Math.min(REPEAT, n));
+    show(n);
+    if (n === REPEAT) (function tick() {
+      timer = setTimeout(function () { if (at < STEPS.length - 1) { show(at + 1); tick(); } }, 2200);
+    })();
+  }
   function show(n) {
-    at = Math.max(0, Math.min(STEPS.length - 1, n));
+    at = n;
     var s = STEPS[at];
     tints.forEach(function (r, i) { r.setAttribute("opacity", s.tint.indexOf(i) >= 0 ? 1 : 0); });
     toks.forEach(function (g, i) { g.setAttribute("opacity", i < Q + s.out ? 1 : 0.12); });
@@ -446,14 +455,18 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
       bandLayer.appendChild(band(b, true, y));
     });
     say.innerHTML = s.say;
-    btns.forEach(function (b, i) { if (i === at) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
-    prev.disabled = at === 0; next.disabled = at === STEPS.length - 1;
+    var active = Math.min(at, REPEAT);
+    btns.forEach(function (b, i) { if (i === active) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+    prev.disabled = at === 0;
+    next.disabled = at >= REPEAT;
   }
-  prev.addEventListener("click", function () { show(at - 1); });
-  next.addEventListener("click", function () { show(at + 1); });
+  function back() { go(Math.min(at, REPEAT) - 1); }
+  function fwd() { if (at < REPEAT) go(at + 1); }
+  prev.addEventListener("click", back);
+  next.addEventListener("click", fwd);
   document.getElementById("plan").addEventListener("keydown", function (e) {
-    if (e.key === "ArrowRight") show(at + 1);
-    if (e.key === "ArrowLeft") show(at - 1);
+    if (e.key === "ArrowRight") fwd();
+    if (e.key === "ArrowLeft") back();
   });
   show(0);
 })();
