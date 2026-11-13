@@ -60,7 +60,7 @@ figcaption { font-size: 13px; line-height: 1.5; text-align: left; max-width: 800
 /* Interactive plan */
 #plan { max-width: 900px; margin: 10px auto 0; }
 #plan .stage { background: #fff; border: 1px solid #e6d0d8; border-radius: 8px; overflow-x: auto; }
-#plan svg { display: block; width: 100%; min-width: 560px; height: auto; }
+#plan svg { display: block; width: 100%; min-width: 640px; height: auto; }
 #plan .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 12px 0 6px; }
 #plan button { font: 600 14px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); background: #fff; color: var(--rose-dark); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
 #plan button.step { padding: 4px 11px; }
@@ -118,7 +118,7 @@ In this paper, we find that the model <b>decides where to look before it looks</
 <div class="col">
 
 <figure id="plan" aria-label="Interactive walk-through of the plan">
-  <div class="stage"><svg id="plan-svg" viewBox="0 0 900 400" role="img" aria-label="Panel strip, question tokens, and answer tokens with the active step drawn as arrows"></svg></div>
+  <div class="stage"><svg id="plan-svg" viewBox="0 0 1060 400" role="img" aria-label="Panel strip, question tokens, and answer tokens, with arrows for each step and the layers where it happens"></svg></div>
   <div class="controls">
     <button id="plan-prev" type="button">Back</button>
     <span id="plan-steps"></span>
@@ -378,6 +378,29 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
 
   var arrowLayer = el("g", {}); svg.appendChild(arrowLayer);
 
+  // Layer ruler: one column per group of heads, layers 0 to 35 top to bottom.
+  var BANDS = [[], [["bind", 15, 21]], [["relay", 19, 23]], [["gaze", 19, 34]],
+    [["bind", 15, 21], ["prog", 20, 21]], [["prog", 20, 25], ["gaze", 19, 34]],
+    [["bind", 15, 21], ["prog", 20, 25], ["gaze", 19, 34]], [["bind", 15, 21], ["prog", 20, 25], ["gaze", 19, 34]],
+    [["bind", 15, 21], ["prog", 20, 25]]];
+  var COLS = { bind: 0, relay: 1, gaze: 2, prog: 3 }, LX = 920, LCW = 16, LCG = 6, LY = 40, LS = 9.6;
+  function ly(l) { return LY + l * LS; }
+  function lx(k) { return LX + COLS[k] * (LCW + LCG); }
+  svg.appendChild(el("text", { x: LX + 2 * (LCW + LCG) - LCG / 2, y: LY - 12, "text-anchor": "middle", "font-size": "13", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, "layers"));
+  Object.keys(COLS).forEach(function (k) {
+    svg.appendChild(el("rect", { x: lx(k), y: ly(0), width: LCW, height: ly(36) - ly(0), fill: "#f4f4f4", stroke: "#ddd" }));
+  });
+  [0, 10, 20, 30, 35].forEach(function (l) {
+    svg.appendChild(el("text", { x: LX - 6, y: ly(l) + LS / 2 + 4, "text-anchor": "end", "font-size": "11", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, l));
+  });
+  var bandLayer = el("g", {}); svg.appendChild(bandLayer);
+  function band(b, active, labelY) {
+    var g = el("g", { opacity: active ? 1 : 0.22 });
+    g.appendChild(el("rect", { x: lx(b[0]), y: ly(b[1]), width: LCW, height: ly(b[2] + 1) - ly(b[1]), fill: C[b[0]] }));
+    if (active) g.appendChild(el("text", { x: LX + 4 * (LCW + LCG), y: labelY, "font-size": "12", "font-weight": "700", fill: C[b[0]], "font-family": "Open Sans, sans-serif", "dominant-baseline": "hanging" }, b[1] + "-" + b[2]));
+    return g;
+  }
+
   function arrow(a) {
     var kind = a[3], c = C[kind], d;
     if (a[0] === "t2p") {
@@ -411,7 +434,17 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
       cur.setAttribute("opacity", 1);
     }
     while (arrowLayer.firstChild) arrowLayer.removeChild(arrowLayer.firstChild);
+    while (bandLayer.firstChild) bandLayer.removeChild(bandLayer.firstChild);
+    for (var j = 0; j < at; j++) {                 // earlier steps stay, lighter
+      STEPS[j].arrows.forEach(function (a) { var p = arrow(a); p.setAttribute("opacity", 0.2); arrowLayer.appendChild(p); });
+      BANDS[j].forEach(function (b) { bandLayer.appendChild(band(b, false)); });
+    }
     s.arrows.forEach(function (a) { arrowLayer.appendChild(arrow(a)); });
+    var lastY = -1e9;                              // stack labels so they never overlap
+    BANDS[at].slice().sort(function (a, b) { return a[1] - b[1]; }).forEach(function (b) {
+      var y = Math.max(ly(b[1]), lastY + 15); lastY = y;
+      bandLayer.appendChild(band(b, true, y));
+    });
     say.innerHTML = s.say;
     btns.forEach(function (b, i) { if (i === at) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
     prev.disabled = at === 0; next.disabled = at === STEPS.length - 1;
