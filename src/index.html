@@ -378,17 +378,17 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
 
   var arrowLayer = el("g", {}); svg.appendChild(arrowLayer);
 
-  // Layer ruler: one column per group of heads, layers 0 to 35 top to bottom.
+  // Layer ruler: one column per group of heads, layer 0 at the bottom and 35 at the top.
   var BANDS = [[], [["bind", 15, 21]], [["relay", 19, 23]], [["gaze", 19, 34]],
     [["bind", 15, 21], ["prog", 20, 21]], [["prog", 20, 25], ["gaze", 19, 34]],
     [["bind", 15, 21], ["prog", 20, 25], ["gaze", 19, 34]], [["bind", 15, 21], ["prog", 20, 25], ["gaze", 19, 34]],
     [["bind", 15, 21], ["prog", 20, 25]]];
   var COLS = { bind: 0, relay: 1, gaze: 2, prog: 3 }, LX = 920, LCW = 16, LCG = 6, LY = 40, LS = 9.6;
-  function ly(l) { return LY + l * LS; }
+  function ly(l) { return LY + (35 - l) * LS; }  // top edge of layer l
   function lx(k) { return LX + COLS[k] * (LCW + LCG); }
   svg.appendChild(el("text", { x: LX + 2 * (LCW + LCG) - LCG / 2, y: LY - 12, "text-anchor": "middle", "font-size": "13", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, "layers"));
   Object.keys(COLS).forEach(function (k) {
-    svg.appendChild(el("rect", { x: lx(k), y: ly(0), width: LCW, height: ly(36) - ly(0), fill: "#f4f4f4", stroke: "#ddd" }));
+    svg.appendChild(el("rect", { x: lx(k), y: ly(35), width: LCW, height: 36 * LS, fill: "#f4f4f4", stroke: "#ddd" }));
   });
   [0, 10, 20, 30, 35].forEach(function (l) {
     svg.appendChild(el("text", { x: LX - 6, y: ly(l) + LS / 2 + 4, "text-anchor": "end", "font-size": "11", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, l));
@@ -396,7 +396,7 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
   var bandLayer = el("g", {}); svg.appendChild(bandLayer);
   function band(b, active, labelY) {
     var g = el("g", { opacity: active ? 1 : 0.22 });
-    g.appendChild(el("rect", { x: lx(b[0]), y: ly(b[1]), width: LCW, height: ly(b[2] + 1) - ly(b[1]), fill: C[b[0]] }));
+    g.appendChild(el("rect", { x: lx(b[0]), y: ly(b[2]), width: LCW, height: (b[2] - b[1] + 1) * LS, fill: C[b[0]] }));
     if (active) g.appendChild(el("text", { x: LX + 4 * (LCW + LCG), y: labelY, "font-size": "12", "font-weight": "700", fill: C[b[0]], "font-family": "Open Sans, sans-serif", "dominant-baseline": "hanging" }, b[1] + "-" + b[2]));
     return g;
   }
@@ -441,8 +441,8 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
     }
     s.arrows.forEach(function (a) { arrowLayer.appendChild(arrow(a)); });
     var lastY = -1e9;                              // stack labels so they never overlap
-    BANDS[at].slice().sort(function (a, b) { return a[1] - b[1]; }).forEach(function (b) {
-      var y = Math.max(ly(b[1]), lastY + 15); lastY = y;
+    BANDS[at].slice().sort(function (a, b) { return b[2] - a[2]; }).forEach(function (b) {
+      var y = Math.max(ly(b[2]), lastY + 15); lastY = y;
       bandLayer.appendChild(band(b, true, y));
     });
     say.innerHTML = s.say;
