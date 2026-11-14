@@ -163,8 +163,8 @@ We opened up one of these models and traced how it does this. We found that the 
 <p>Almost every modern AI model that writes text is a <b>transformer</b>. It reads text as a row of <b>tokens</b>, small word pieces. Each token carries a running note of everything the model knows about it so far. This note is called the <b>residual stream</b>, and you can picture it as a straight line running up through the model.</p>
 <div class="stage"><svg id="block-svg" viewBox="0 0 900 340" role="img" aria-label="The simplest transformer block: a residual stream line with an attention step and an MLP step that each read from the line and add back to it"></svg></div>
 <p style="margin-top: 0.8rem">This is the simplest <b>transformer block</b>. It does two things, in order. <b>Attention</b> reads the stream, pulls in information from <i>other</i> tokens, and adds it back. Then the <b>MLP</b> reads the stream and works on <i>this</i> token alone, and adds its result back too. A model is just many of these blocks stacked on top of each other. Ours has 36, which we call its <b>layers</b>.</p>
-<p>Here is what that looks like for a whole sentence going through two blocks.</p>
-<div class="stage"><svg id="tf-svg" viewBox="0 0 900 400" role="img" aria-label="A sentence of five tokens going through two transformer blocks"></svg></div>
+<p>Here is a whole sentence going through two blocks. We follow the last token.</p>
+<div class="stage"><svg id="tf-svg" viewBox="0 0 900 515" role="img" aria-label="A sentence of five tokens; the last token goes through two transformer blocks, each with attention and an MLP added to its residual stream"></svg></div>
 <div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
 <div class="say" aria-live="polite"></div>
 </div>
@@ -694,72 +694,75 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
   svg.appendChild(svgEl("text", { x: 150, y: 117, "font-size": 13, fill: P_GREEN, "font-family": PF }, "this token only"));
 })();
 
-/* Primer 1b: a sentence going through two blocks. Attention looks back; the MLP only pulses in place. */
+/* Primer 1b: a sentence through two blocks, drawn for the last token only. Earlier tokens keep faint streams. */
 (function () {
   var svg = document.getElementById("tf-svg"); if (!svg) return;
-  arrowHead(svg, "tf-b", P_BLUE); arrowHead(svg, "tf-r", P_ROSE);
-  var TOK = ["The", "cat", "sat", "on", "the"];
-  function x(i) { return 200 + i * 130; }
-  var BLOCKS = [{ top: 205, bot: 335, name: "block 1" }, { top: 62, bot: 192, name: "block 2" }];
-  BLOCKS.forEach(function (b) {
-    svg.appendChild(svgEl("rect", { x: 96, y: b.top, width: 760, height: b.bot - b.top, rx: 10, fill: "#fffafc", stroke: P_ROSE, "stroke-width": 1.5 }));
-    svg.appendChild(svgEl("text", { x: 108, y: b.top + 20, "font-size": 13, "font-weight": 700, fill: P_ROSE, "font-family": PF }, b.name));
-    svg.appendChild(svgEl("text", { x: 108, y: b.bot - 18, "font-size": 12, fill: P_BLUE, "font-family": PF }, "attention"));
-    svg.appendChild(svgEl("text", { x: 108, y: b.top + 52, "font-size": 12, fill: P_GREEN, "font-family": PF }, "MLP"));
+  arrowHead(svg, "tf-b", P_BLUE); arrowHead(svg, "tf-g", P_GREEN); arrowHead(svg, "tf-r", P_ROSE);
+  var PREV = ["The", "cat", "sat", "on"], LASTTOK = "the";
+  function px(i) { return 90 + i * 100; }
+  var X = 720, BX = 540, BW = 120;               // last token's stream, and where its boxes sit
+  // earlier tokens: faint streams
+  PREV.forEach(function (t, i) {
+    svg.appendChild(svgEl("line", { x1: px(i), y1: 476, x2: px(i), y2: 52, stroke: P_ROSE, "stroke-width": 3, opacity: 0.3 }));
+    svg.appendChild(svgEl("rect", { x: px(i) - 34, y: 478, width: 68, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
+    svg.appendChild(svgEl("text", { x: px(i), y: 497, "text-anchor": "middle", "font-size": 14, fill: "#333", "font-family": PM }, t));
   });
-  TOK.forEach(function (t, i) {
-    svg.appendChild(svgEl("line", { x1: x(i), y1: 352, x2: x(i), y2: 44, stroke: P_ROSE, "stroke-width": 3, opacity: 0.45 }));
-    svg.appendChild(svgEl("rect", { x: x(i) - 36, y: 356, width: 72, height: 30, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
-    svg.appendChild(svgEl("text", { x: x(i), y: 376, "text-anchor": "middle", "font-size": 14, fill: "#333", "font-family": PM }, t));
-  });
-  // per-block layers: attention arcs (one group per looking token) and MLP boxes
-  var att = [], mlp = [];
-  BLOCKS.forEach(function (b, k) {
-    var y = b.bot - 22, perTok = [];
-    TOK.forEach(function (t, i) {
-      var g = svgEl("g", { opacity: 0 });
-      for (var j = 0; j < i; j++) {
-        var h = 14 + (i - j) * 9;
-        g.appendChild(svgEl("path", { d: "M" + (x(i) - 4) + "," + y + " Q" + (x(i) + x(j)) / 2 + "," + (y - h) + " " + (x(j) + 5) + "," + (y - 2), fill: "none", stroke: P_BLUE, "stroke-width": 2, "marker-end": "url(#tf-b)" }));
-      }
-      svg.appendChild(g); perTok.push(g);
+  // last token: its stream
+  svg.appendChild(svgEl("line", { x1: X, y1: 476, x2: X, y2: 50, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#tf-r)" }));
+  svg.appendChild(svgEl("rect", { x: X - 34, y: 478, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
+  svg.appendChild(svgEl("text", { x: X, y: 497, "text-anchor": "middle", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, LASTTOK));
+
+  function part(y0, y1, name, color, mk) {        // branch off at y0, box, add back at y1 (same drawing as the single block)
+    var g = svgEl("g", {}), top = y1 + 22, h = 46, mid = BX + BW / 2;
+    g.appendChild(svgEl("path", { d: "M" + X + "," + y0 + " H" + mid + " V" + (top + h + 2), fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + mk + ")" }));
+    var box = svgEl("rect", { x: BX, y: top, width: BW, height: h, rx: 6, fill: color, "class": "mlp-box" });
+    g.appendChild(box);
+    g.appendChild(svgEl("text", { x: mid, y: top + 29, "text-anchor": "middle", "font-size": 15, "font-weight": 700, fill: "#fff", "font-family": PF }, name));
+    g.appendChild(svgEl("path", { d: "M" + mid + "," + top + " V" + y1 + " H" + (X - 13), fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + mk + ")" }));
+    g.appendChild(svgEl("circle", { cx: X, cy: y1, r: 11, fill: "#fff", stroke: color, "stroke-width": 2 }));
+    g.appendChild(svgEl("text", { x: X, y: y1 + 6, "text-anchor": "middle", "font-size": 17, "font-weight": 700, fill: color, "font-family": PF }, "+"));
+    svg.appendChild(g);
+    return { g: g, box: box, mid: top + h / 2 };
+  }
+  function block(T, B, name) {
+    svg.appendChild(svgEl("rect", { x: BX - 30, y: T, width: X - BX + 75, height: B - T, rx: 10, fill: "none", stroke: P_ROSE, "stroke-width": 1.6 }));
+    svg.appendChild(svgEl("text", { x: BX - 20, y: T + 18, "font-size": 13, "font-weight": 700, fill: P_ROSE, "font-family": PF }, name));
+    var att = part(B - 15, B - 95, "Attention", P_BLUE, "tf-b");
+    var mlp = part(B - 104, B - 185, "MLP", P_GREEN, "tf-g");
+    var arrows = svgEl("g", { opacity: 0 });        // the last token looks back at each earlier stream
+    PREV.forEach(function (t, i) {
+      var y = att.mid, x0 = BX - 2, x1 = px(i) + 6, h = 16 + (PREV.length - i) * 9;
+      arrows.appendChild(svgEl("path", { d: "M" + x0 + "," + y + " Q" + (x0 + x1) / 2 + "," + (y - h) + " " + x1 + "," + (y - 2), fill: "none", stroke: P_BLUE, "stroke-width": 2, "marker-end": "url(#tf-b)" }));
     });
-    att.push(perTok);
-    var boxes = svgEl("g", {});
-    TOK.forEach(function (t, i) { boxes.appendChild(svgEl("rect", { x: x(i) - 30, y: b.top + 38, width: 60, height: 22, rx: 5, fill: P_GREEN, opacity: 0.25, "class": "mlp-box" })); });
-    svg.appendChild(boxes); mlp.push(boxes);
-  });
+    svg.appendChild(arrows);
+    return { att: att, mlp: mlp, arrows: arrows };
+  }
+  var b1 = block(268, 470, "block 1"), b2 = block(62, 264, "block 2");
   var out = svgEl("g", { opacity: 0 });
-  out.appendChild(svgEl("rect", { x: x(4) - 75, y: 6, width: 150, height: 34, rx: 17, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 }));
-  out.appendChild(svgEl("text", { x: x(4), y: 28, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, "next word: mat"));
+  out.appendChild(svgEl("rect", { x: X - 78, y: 6, width: 156, height: 34, rx: 17, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 }));
+  out.appendChild(svgEl("text", { x: X, y: 28, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, "next word: mat"));
   svg.appendChild(out);
 
-  var LAST = TOK.length - 1;                      // only the last token's arrows are ever drawn
-  function setAtt(k, mode) {                      // mode: 0 hidden, 1 active, 2 done (faded)
-    att[k].forEach(function (g, j) { g.setAttribute("opacity", j !== LAST || mode === 0 ? 0 : mode === 1 ? 1 : 0.25); });
+  // 0 = not yet, 1 = working now, 2 = done
+  function setPart(p, mode, arrows) {
+    p.g.setAttribute("opacity", mode === 0 ? 0.25 : mode === 1 ? 1 : 0.6);
+    p.box.classList.toggle("pulse", mode === 1 && !arrows);
+    if (arrows) arrows.setAttribute("opacity", mode === 1 ? 1 : mode === 2 ? 0.2 : 0);
   }
-  function setMlp(k, mode) {                      // 0 idle, 1 working, 2 done
-    [].forEach.call(mlp[k].children, function (r) {
-      r.setAttribute("opacity", mode === 0 ? 0.25 : 1);
-      r.classList.toggle("pulse", mode === 1);
-    });
-  }
-  var STATE = [
-    [[0, 0], [0, 0], 0], [[1, 0], [0, 0], 0], [[2, 1], [0, 0], 0],
-    [[2, 2], [1, 0], 0], [[2, 2], [2, 1], 0], [[2, 2], [2, 2], 1]];
+  var STATE = [[0, 0, 0, 0, 0], [1, 0, 0, 0, 0], [2, 1, 0, 0, 0], [2, 2, 1, 0, 0], [2, 2, 2, 1, 0], [2, 2, 2, 2, 1]];
   var FRAMES = [
-    'A sentence of five tokens. Each token gets its own residual stream, a line running up through both blocks.',
-    '<b>Block 1, attention.</b> Follow the last token, <span class="tok">the</span>. It looks back at the tokens before it and pulls in what it needs. Every other token does the same, but we draw only this one. The arrows only ever point back: a token never sees what comes after it.',
-    '<b>Block 1, MLP.</b> Now each token works on its own stream, by itself. No arrows: nothing moves between tokens here.',
-    '<b>Block 2, attention.</b> The same thing again, one block higher. The last token looks back once more, and the streams it reads now hold more than the words themselves.',
-    '<b>Block 2, MLP.</b> Each token works on its own stream once more.',
-    'At the top, the stream of the last token is turned into the next word, <span class="tok">mat</span>. The model adds it to the end of the sentence and runs everything again for the word after.'
+    'A sentence of five tokens, each with its own residual stream. We follow the last token, <span class="tok">the</span>, through two blocks. The other tokens go through the same blocks, but we keep them faint.',
+    '<b>Block 1, attention.</b> The last token looks back at the streams of the tokens before it and pulls in what it needs. The result is added to its own stream. A token can only look back, never ahead.',
+    '<b>Block 1, MLP.</b> Now the MLP works on this token\'s stream by itself. No arrows: nothing comes in from other tokens. Its result is added to the stream too.',
+    '<b>Block 2, attention.</b> The same two steps, one block higher. The last token looks back again, and the streams it reads now hold more than the words themselves.',
+    '<b>Block 2, MLP.</b> The MLP works on the stream once more, on its own.',
+    'At the top, the last token\'s stream is turned into the next word, <span class="tok">mat</span>. The model adds it to the end of the sentence and runs everything again for the word after.'
   ];
   makeStepper(document.getElementById("primer-transformer"), FRAMES, function (n) {
     var s = STATE[n];
-    setAtt(0, s[0][0]); setMlp(0, s[0][1]);
-    setAtt(1, s[1][0]); setMlp(1, s[1][1]);
-    out.setAttribute("opacity", s[2]);
+    setPart(b1.att, s[0], b1.arrows); setPart(b1.mlp, s[1]);
+    setPart(b2.att, s[2], b2.arrows); setPart(b2.mlp, s[3]);
+    out.setAttribute("opacity", s[4]);
   });
 })();
 
