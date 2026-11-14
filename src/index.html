@@ -734,15 +734,9 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
   out.appendChild(svgEl("text", { x: x(4), y: 28, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, "next word: mat"));
   svg.appendChild(out);
 
-  var sweep = null;
-  function setAtt(k, mode) {                      // mode: 0 hidden, 1 sweeping, 2 done (faded)
-    att[k].forEach(function (g) { g.setAttribute("opacity", mode === 2 ? 0.25 : 0); });
-    if (mode !== 1) return;
-    var i = 1;
-    (function next() {
-      att[k].forEach(function (g, j) { g.setAttribute("opacity", j < i ? 0.25 : j === i ? 1 : 0); });
-      if (i < TOK.length - 1) { i++; sweep = setTimeout(next, 650); }
-    })();
+  var LAST = TOK.length - 1;                      // only the last token's arrows are ever drawn
+  function setAtt(k, mode) {                      // mode: 0 hidden, 1 active, 2 done (faded)
+    att[k].forEach(function (g, j) { g.setAttribute("opacity", j !== LAST || mode === 0 ? 0 : mode === 1 ? 1 : 0.25); });
   }
   function setMlp(k, mode) {                      // 0 idle, 1 working, 2 done
     [].forEach.call(mlp[k].children, function (r) {
@@ -755,14 +749,13 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
     [[2, 2], [1, 0], 0], [[2, 2], [2, 1], 0], [[2, 2], [2, 2], 1]];
   var FRAMES = [
     'A sentence of five tokens. Each token gets its own residual stream, a line running up through both blocks.',
-    '<b>Block 1, attention.</b> Each token looks back at the tokens before it and pulls in what it needs. The arrows only ever point back: a token can never see what comes after it.',
+    '<b>Block 1, attention.</b> Follow the last token, <span class="tok">the</span>. It looks back at the tokens before it and pulls in what it needs. Every other token does the same, but we draw only this one. The arrows only ever point back: a token never sees what comes after it.',
     '<b>Block 1, MLP.</b> Now each token works on its own stream, by itself. No arrows: nothing moves between tokens here.',
-    '<b>Block 2, attention.</b> The same thing again, one block higher. Each token now looks back at streams that already hold more than the words themselves.',
+    '<b>Block 2, attention.</b> The same thing again, one block higher. The last token looks back once more, and the streams it reads now hold more than the words themselves.',
     '<b>Block 2, MLP.</b> Each token works on its own stream once more.',
     'At the top, the stream of the last token is turned into the next word, <span class="tok">mat</span>. The model adds it to the end of the sentence and runs everything again for the word after.'
   ];
   makeStepper(document.getElementById("primer-transformer"), FRAMES, function (n) {
-    clearTimeout(sweep);
     var s = STATE[n];
     setAtt(0, s[0][0]); setMlp(0, s[0][1]);
     setAtt(1, s[1][0]); setMlp(1, s[1][1]);
