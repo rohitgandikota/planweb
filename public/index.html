@@ -695,7 +695,7 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
 })();
 
 /* Primer 1b: a sentence through two blocks, drawn for the last token only. Earlier tokens keep faint streams.
-   Glowing dots show information moving; each addition grows a new colored stripe on the stream. */
+   Glowing dots show information moving. */
 (function () {
   var svg = document.getElementById("tf-svg"); if (!svg) return;
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -715,7 +715,6 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
   svg.appendChild(svgEl("line", { x1: X, y1: 476, x2: X, y2: TOP, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#tf-r)" }));
   svg.appendChild(svgEl("rect", { x: X - 34, y: 478, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
   svg.appendChild(svgEl("text", { x: X, y: 497, "text-anchor": "middle", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, LASTTOK));
-  var stripeLayer = svgEl("g", {}); svg.appendChild(stripeLayer);
 
   function part(y0, y1, name, color, mk, k) {
     var g = svgEl("g", {}), top = y1 + 22, h = 46, mid = BX + BW / 2;
@@ -728,11 +727,7 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
     g.appendChild(svgEl("circle", { cx: X, cy: y1, r: 11, fill: "#fff", stroke: color, "stroke-width": 2 }));
     g.appendChild(svgEl("text", { x: X, y: y1 + 6, "text-anchor": "middle", "font-size": 17, "font-weight": 700, fill: color, "font-family": PF }, "+"));
     svg.appendChild(g);
-    // the stripe this part adds to the stream, from its "+" up to the top
-    var sx = X + 7 + k * 5;
-    var stripe = svgEl("line", { x1: sx, y1: y1, x2: sx, y2: y1, stroke: color, "stroke-width": 4, "stroke-linecap": "round", opacity: 0 });
-    stripeLayer.appendChild(stripe);
-    return { g: g, box: box, inP: inP, outP: outP, stripe: stripe, y1: y1, color: color };
+    return { g: g, box: box, inP: inP, outP: outP, y1: y1, color: color };
   }
   function block(T, B, name, k) {
     svg.appendChild(svgEl("rect", { x: BX - 30, y: T, width: X - BX + 75, height: B - T, rx: 10, fill: "none", stroke: P_ROSE, "stroke-width": 1.6 }));
@@ -773,14 +768,6 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
       return false;
     });
   }
-  function grow(p, start, dur) {                              // the new stripe grows up the stream
-    jobs.push(function (t) {
-      var k = Math.max(0, Math.min(1, (t - start) / dur));
-      p.stripe.setAttribute("opacity", k > 0 ? 1 : 0);
-      p.stripe.setAttribute("y2", p.y1 - (p.y1 - TOP) * ease(k));
-      return k >= 1;
-    });
-  }
   function run() {
     var t0 = performance.now();
     (function tick(now) {
@@ -789,16 +776,15 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
       if (!alldone) raf = requestAnimationFrame(tick);
     })(t0);
   }
-  function stripeFull(p, on) { p.stripe.setAttribute("opacity", on ? 1 : 0); p.stripe.setAttribute("y2", on ? TOP : p.y1); }
 
   // 0 = not yet, 1 = working now, 2 = done
   var STATE = [[0, 0, 0, 0, 0], [1, 0, 0, 0, 0], [2, 1, 0, 0, 0], [2, 2, 1, 0, 0], [2, 2, 2, 1, 0], [2, 2, 2, 2, 1]];
   var FRAMES = [
     'A sentence of five tokens, each with its own residual stream. We follow the last token, <span class="tok">the</span>, through two blocks. The other tokens go through the same blocks, but we keep them faint.',
-    '<b>Block 1, attention.</b> The last token looks back at the streams of the tokens before it, and information flows in from them (the glowing dots). Attention adds what it found back to the stream: the new <span style="color:#0072B2;font-weight:700">blue stripe</span>. A token can only look back, never ahead.',
-    '<b>Block 1, MLP.</b> The MLP takes this token\'s stream and works on it alone. Nothing comes in from other tokens. Its result is added too: the <span style="color:#009E73;font-weight:700">green stripe</span>.',
-    '<b>Block 2, attention.</b> The same two steps, one block higher. The last token looks back again, and adds another blue stripe. Notice the stream getting richer: every block adds to it, and nothing is erased.',
-    '<b>Block 2, MLP.</b> The MLP works on the stream once more and adds another green stripe.',
+    '<b>Block 1, attention.</b> The last token looks back at the streams of the tokens before it, and information flows in from them (the glowing dots). Attention adds what it found back to the stream, at the plus sign. A token can only look back, never ahead.',
+    '<b>Block 1, MLP.</b> The MLP takes this token\'s stream and works on it alone. Nothing comes in from other tokens. Its result is added to the stream too.',
+    '<b>Block 2, attention.</b> The same two steps, one block higher. The last token looks back again, and adds what it found. Every block adds to the stream, and nothing is erased.',
+    '<b>Block 2, MLP.</b> The MLP works on the stream once more and adds its result.',
     'At the top, the last token\'s stream, with everything that was added to it, is turned into the next word, <span class="tok">mat</span>. The model adds it to the end of the sentence and runs everything again for the word after.'
   ];
   makeStepper(document.getElementById("primer-transformer"), FRAMES, function (n) {
@@ -809,16 +795,13 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
       p.g.setAttribute("opacity", m === 0 ? 0.25 : m === 1 ? 1 : 0.6);
       p.box.classList.toggle("pulse", m === 1 && !p.arrows);
       if (p.arrows) p.arrows.setAttribute("opacity", m === 1 ? 1 : m === 2 ? 0.2 : 0);
-      stripeFull(p, m === 2 || (m === 1 && reduce));
       if (m === 1 && !reduce) {
         if (p.looks) {                     // attention: dots flow in from every earlier stream, then out to the stream
           p.looks.forEach(function (path, j) { along(path, P_BLUE, j * 120, 1000, true); });
           along(p.outP, P_BLUE, 1350, 600);
-          grow(p, 1900, 700);
         } else {                           // MLP: a dot from the stream into the box, then back out
           along(p.inP, P_GREEN, 0, 650);
           along(p.outP, P_GREEN, 1150, 600);
-          grow(p, 1700, 700);
         }
       }
     });
