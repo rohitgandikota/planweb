@@ -161,10 +161,10 @@ We opened up one of these models and traced how it does this. We found that the 
 <summary>Primer: how does a transformer work?</summary>
 <div class="primer-body">
 <p>Almost every modern AI model that writes text is a <b>transformer</b>. It reads text as a row of <b>tokens</b>, small word pieces. Each token carries a running note of everything the model knows about it so far. This note is called the <b>residual stream</b>, and you can picture it as a straight line running up through the model.</p>
-<div class="stage"><svg id="block-svg" viewBox="0 0 900 340" role="img" aria-label="The simplest transformer block: a residual stream line with an attention step and an MLP step that each read from the line and add back to it"></svg></div>
+<div class="stage"><svg id="block-svg" viewBox="0 0 900 362" role="img" aria-label="The simplest transformer block: a residual stream line with an attention step and an MLP step that each read from the line and add back to it"></svg></div>
 <p style="margin-top: 0.8rem">This is the simplest <b>transformer block</b>. It does two things, in order. <b>Attention</b> reads the stream, pulls in information from <i>other</i> tokens, and adds it back. Then the <b>MLP</b> reads the stream and works on <i>this</i> token alone, and adds its result back too. A model is just many of these blocks stacked on top of each other. Ours has 36, which we call its <b>layers</b>.</p>
 <p>Here is a whole sentence going through two blocks. We follow the last token.</p>
-<div class="stage"><svg id="tf-svg" viewBox="0 0 900 515" role="img" aria-label="A sentence of five tokens; the last token goes through two transformer blocks, each with attention and an MLP added to its residual stream"></svg></div>
+<div class="stage"><svg id="tf-svg" viewBox="0 0 900 630" role="img" aria-label="A sentence of five tokens; the last token goes through two transformer blocks, each with attention and an MLP added to its residual stream"></svg></div>
 <div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
 <div class="say" aria-live="polite"></div>
 </div>
@@ -661,37 +661,64 @@ function arrowHead(svg, id, color) {
 var PF = "Open Sans, sans-serif", PM = "JetBrains Mono, Menlo, monospace";
 var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b6b";
 
+/* Shared drawing of one transformer block on a residual stream at x = X.
+   Bottom to top: branch to attention, attention box, add back at a plus; branch to MLP, MLP box, add back at a plus.
+   Every gap is fixed so arrows never squash: 26 px from branch to box, 24 px from box to plus, 22 px between parts. */
+var BLK = { boxH: 44, boxW: 120, inGap: 26, outGap: 24, partGap: 22, r: 12 };
+BLK.height = 2 * (BLK.inGap + BLK.boxH + BLK.outGap) + BLK.partGap;   // from the first branch to the last plus
+function blkMarkers(svg, id) {
+  var defs = svgEl("defs", {});
+  [["b", P_BLUE], ["g", P_GREEN], ["r", P_ROSE]].forEach(function (c) {
+    var m = svgEl("marker", { id: id + "-" + c[0], viewBox: "0 0 10 10", refX: 10, refY: 5, markerWidth: 7, markerHeight: 7, markerUnits: "userSpaceOnUse", orient: "auto" });
+    m.setAttribute("markerWidth", 9); m.setAttribute("markerHeight", 9);
+    m.appendChild(svgEl("path", { d: "M0,0 L10,5 L0,10 z", fill: c[1] }));
+    defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+}
+function blkPart(svg, id, X, cx, yBranch, name, color, key) {
+  var bottom = yBranch - BLK.inGap, top = bottom - BLK.boxH, yPlus = top - BLK.outGap;
+  var g = svgEl("g", {});
+  var inP = svgEl("path", { d: "M" + X + "," + yBranch + " H" + cx + " V" + bottom, fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + id + "-" + key + ")" });
+  var box = svgEl("rect", { x: cx - BLK.boxW / 2, y: top, width: BLK.boxW, height: BLK.boxH, rx: 7, fill: color, "class": "mlp-box" });
+  var label = svgEl("text", { x: cx, y: top + BLK.boxH / 2 + 5, "text-anchor": "middle", "font-size": 15, "font-weight": 700, fill: "#fff", "font-family": PF }, name);
+  var outP = svgEl("path", { d: "M" + cx + "," + top + " V" + yPlus + " H" + (X - BLK.r - 1), fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + id + "-" + key + ")" });
+  var dot = svgEl("circle", { cx: X, cy: yBranch, r: 4, fill: P_ROSE });
+  var plus = svgEl("g", {});
+  plus.appendChild(svgEl("circle", { cx: X, cy: yPlus, r: BLK.r, fill: "#fff", stroke: P_ROSE, "stroke-width": 2.5 }));
+  plus.appendChild(svgEl("path", { d: "M" + (X - 6) + "," + yPlus + " H" + (X + 6) + " M" + X + "," + (yPlus - 6) + " V" + (yPlus + 6), stroke: P_ROSE, "stroke-width": 2.5, "stroke-linecap": "round" }));
+  [inP, outP, box, label, dot].forEach(function (e) { g.appendChild(e); });
+  svg.appendChild(g);
+  svg.appendChild(plus);                                // the plus never fades, so the stream never shows through it
+  return { g: g, box: box, inP: inP, outP: outP, yPlus: yPlus, mid: top + BLK.boxH / 2, left: cx - BLK.boxW / 2 };
+}
+function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention and MLP parts and the block's frame
+  var att = blkPart(svg, id, X, cx, yBranch, "Attention", P_BLUE, "b");
+  var mlp = blkPart(svg, id, X, cx, att.yPlus - BLK.partGap, "MLP", P_GREEN, "g");
+  var T = mlp.yPlus - BLK.r - 14, B = yBranch + 14;
+  var frame = svgEl("rect", { x: cx - BLK.boxW / 2 - 24, y: T, width: (X + 28) - (cx - BLK.boxW / 2 - 24), height: B - T, rx: 10, fill: "none", stroke: P_ROSE, "stroke-width": 1.6 });
+  svg.insertBefore(frame, svg.firstChild.nextSibling);
+  svg.appendChild(svgEl("text", { x: cx - BLK.boxW / 2 - 12, y: T + 18, "font-size": 13, "font-weight": 700, fill: P_ROSE, "font-family": PF }, name));
+  return { att: att, mlp: mlp, top: T, bottom: B };
+}
+
 /* Primer 1a: the simplest transformer block, drawn once. */
 (function () {
   var svg = document.getElementById("block-svg"); if (!svg) return;
-  arrowHead(svg, "blk-r", P_ROSE); arrowHead(svg, "blk-b", P_BLUE); arrowHead(svg, "blk-g", P_GREEN);
-  var X = 470;
-  svg.appendChild(svgEl("rect", { x: 250, y: 46, width: 420, height: 232, rx: 10, fill: "#fffafc", stroke: P_ROSE, "stroke-width": 1.8 }));
-  svg.appendChild(svgEl("text", { x: 264, y: 68, "font-size": 14, "font-weight": 700, fill: P_ROSE, "font-family": PF }, "one transformer block"));
-  // residual stream
-  svg.appendChild(svgEl("line", { x1: X, y1: 300, x2: X, y2: 22, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#blk-r)" }));
-  svg.appendChild(svgEl("rect", { x: X - 40, y: 302, width: 80, height: 30, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
-  svg.appendChild(svgEl("text", { x: X, y: 322, "text-anchor": "middle", "font-size": 14, fill: "#333", "font-family": PM }, "cat"));
-  svg.appendChild(svgEl("text", { x: X + 14, y: 296, "font-size": 13, fill: P_ROSE, "font-family": PF }, "residual stream"));
-  svg.appendChild(svgEl("text", { x: X + 14, y: 26, "font-size": 13, fill: P_ROSE, "font-family": PF }, "to the next block"));
-  function step(y0, y1, name, color, mk) {
-    // branch off the stream at y0, through the box, and add back at y1
-    var bx = 290, bw = 120, top = y1 + 22, h = 46;
-    svg.appendChild(svgEl("path", { d: "M" + X + "," + y0 + " H" + (bx + bw / 2) + " V" + (top + h + 2), fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + mk + ")" }));
-    svg.appendChild(svgEl("rect", { x: bx, y: top, width: bw, height: h, rx: 6, fill: color }));
-    svg.appendChild(svgEl("text", { x: bx + bw / 2, y: top + 29, "text-anchor": "middle", "font-size": 15, "font-weight": 700, fill: "#fff", "font-family": PF }, name));
-    svg.appendChild(svgEl("path", { d: "M" + (bx + bw / 2) + "," + top + " V" + y1 + " H" + (X - 13), fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + mk + ")" }));
-    svg.appendChild(svgEl("circle", { cx: X, cy: y1, r: 11, fill: "#fff", stroke: color, "stroke-width": 2 }));
-    svg.appendChild(svgEl("text", { x: X, y: y1 + 6, "text-anchor": "middle", "font-size": 17, "font-weight": 700, fill: color, "font-family": PF }, "+"));
-  }
-  step(262, 168, "Attention", P_BLUE, "blk-b");
-  step(150, 80, "MLP", P_GREEN, "blk-g");
-  // other tokens feed attention
-  svg.appendChild(svgEl("path", { d: "M150,213 H286", fill: "none", stroke: P_BLUE, "stroke-width": 2, "stroke-dasharray": "5 4", "marker-end": "url(#blk-b)" }));
-  svg.appendChild(svgEl("text", { x: 150, y: 204, "font-size": 13, fill: P_BLUE, "font-family": PF }, "other tokens"));
-  svg.appendChild(svgEl("text", { x: 500, y: 172, "font-size": 13, fill: P_BLUE, "font-family": PF }, "add what attention found"));
-  svg.appendChild(svgEl("text", { x: 500, y: 84, "font-size": 13, fill: P_GREEN, "font-family": PF }, "add the MLP's result"));
-  svg.appendChild(svgEl("text", { x: 150, y: 117, "font-size": 13, fill: P_GREEN, "font-family": PF }, "this token only"));
+  blkMarkers(svg, "b1");
+  var X = 480, CX = 340, Y0 = 300;
+  var stream = svgEl("line", { x1: X, y1: 326, x2: X, y2: 14, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#b1-r)" });
+  svg.appendChild(stream);
+  var b = blkBlock(svg, "b1", X, CX, Y0, "one transformer block");
+  svg.appendChild(svgEl("rect", { x: X - 40, y: 328, width: 80, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
+  svg.appendChild(svgEl("text", { x: X, y: 347, "text-anchor": "middle", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "cat"));
+  svg.appendChild(svgEl("text", { x: X + 50, y: 347, "font-size": 13, fill: P_ROSE, "font-family": PF }, "residual stream"));
+  svg.appendChild(svgEl("text", { x: X + 14, y: 22, "font-size": 13, fill: P_ROSE, "font-family": PF }, "to the next block"));
+  svg.appendChild(svgEl("text", { x: X + 40, y: b.att.yPlus + 5, "font-size": 13, fill: P_BLUE, "font-family": PF }, "add what attention found"));
+  svg.appendChild(svgEl("text", { x: X + 40, y: b.mlp.yPlus + 5, "font-size": 13, fill: P_GREEN, "font-family": PF }, "add the MLP's result"));
+  svg.appendChild(svgEl("path", { d: "M120," + b.att.mid + " H" + (b.att.left - 1), fill: "none", stroke: P_BLUE, "stroke-width": 2, "stroke-dasharray": "5 4", "marker-end": "url(#b1-b)" }));
+  svg.appendChild(svgEl("text", { x: 120, y: b.att.mid - 9, "font-size": 13, fill: P_BLUE, "font-family": PF }, "other tokens"));
+  svg.appendChild(svgEl("text", { x: b.mlp.left - 14, y: b.mlp.mid + 5, "text-anchor": "end", "font-size": 13, fill: P_GREEN, "font-family": PF }, "this token only"));
 })();
 
 /* Primer 1b: a sentence through two blocks, drawn for the last token only. Earlier tokens keep faint streams.
@@ -699,64 +726,43 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
 (function () {
   var svg = document.getElementById("tf-svg"); if (!svg) return;
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  arrowHead(svg, "tf-b", P_BLUE); arrowHead(svg, "tf-g", P_GREEN); arrowHead(svg, "tf-r", P_ROSE);
+  blkMarkers(svg, "b2");
   var defs = svgEl("defs", {}), f = svgEl("filter", { id: "tf-glow", x: "-100%", y: "-100%", width: "300%", height: "300%" });
   f.innerHTML = '<feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>';
   defs.appendChild(f); svg.appendChild(defs);
-  var PREV = ["The", "cat", "sat", "on"], LASTTOK = "the", TOP = 50;
-  function px(i) { return 90 + i * 100; }
-  var X = 720, BX = 540, BW = 120;
+  var PREV = ["The", "cat", "sat", "on"], X = 730, CX = 590, TOKY = 594;
+  function px(i) { return 80 + i * 100; }
   PREV.forEach(function (t, i) {
-    svg.appendChild(svgEl("line", { x1: px(i), y1: 476, x2: px(i), y2: 52, stroke: P_ROSE, "stroke-width": 3, opacity: 0.3 }));
-    svg.appendChild(svgEl("rect", { x: px(i) - 34, y: 478, width: 68, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
-    svg.appendChild(svgEl("text", { x: px(i), y: 497, "text-anchor": "middle", "font-size": 14, fill: "#333", "font-family": PM }, t));
+    svg.appendChild(svgEl("line", { x1: px(i), y1: TOKY, x2: px(i), y2: 76, stroke: P_ROSE, "stroke-width": 3, opacity: 0.3 }));
+    svg.appendChild(svgEl("rect", { x: px(i) - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
+    svg.appendChild(svgEl("text", { x: px(i), y: TOKY + 19, "text-anchor": "middle", "font-size": 14, fill: "#333", "font-family": PM }, t));
   });
-  // the last token's stream
-  svg.appendChild(svgEl("line", { x1: X, y1: 476, x2: X, y2: TOP, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#tf-r)" }));
-  svg.appendChild(svgEl("rect", { x: X - 34, y: 478, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
-  svg.appendChild(svgEl("text", { x: X, y: 497, "text-anchor": "middle", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, LASTTOK));
-
-  function part(y0, y1, name, color, mk, k) {
-    var g = svgEl("g", {}), top = y1 + 22, h = 46, mid = BX + BW / 2;
-    var inP = svgEl("path", { d: "M" + X + "," + y0 + " H" + mid + " V" + (top + h + 2), fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + mk + ")" });
-    var box = svgEl("rect", { x: BX, y: top, width: BW, height: h, rx: 6, fill: color, "class": "mlp-box" });
-    var outP = svgEl("path", { d: "M" + mid + "," + top + " V" + y1 + " H" + (X - 13), fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + mk + ")" });
-    g.appendChild(inP); g.appendChild(box);
-    g.appendChild(svgEl("text", { x: mid, y: top + 29, "text-anchor": "middle", "font-size": 15, "font-weight": 700, fill: "#fff", "font-family": PF }, name));
-    g.appendChild(outP);
-    g.appendChild(svgEl("circle", { cx: X, cy: y1, r: 11, fill: "#fff", stroke: color, "stroke-width": 2 }));
-    g.appendChild(svgEl("text", { x: X, y: y1 + 6, "text-anchor": "middle", "font-size": 17, "font-weight": 700, fill: color, "font-family": PF }, "+"));
-    svg.appendChild(g);
-    return { g: g, box: box, inP: inP, outP: outP, y1: y1, color: color };
-  }
-  function block(T, B, name, k) {
-    svg.appendChild(svgEl("rect", { x: BX - 30, y: T, width: X - BX + 75, height: B - T, rx: 10, fill: "none", stroke: P_ROSE, "stroke-width": 1.6 }));
-    svg.appendChild(svgEl("text", { x: BX - 20, y: T + 18, "font-size": 13, "font-weight": 700, fill: P_ROSE, "font-family": PF }, name));
-    var att = part(B - 15, B - 95, "Attention", P_BLUE, "tf-b", k);
-    var mlp = part(B - 104, B - 185, "MLP", P_GREEN, "tf-g", k + 1);
-    var arrows = svgEl("g", { opacity: 0 }), paths = [];
+  svg.appendChild(svgEl("line", { x1: X, y1: TOKY, x2: X, y2: 62, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#b2-r)" }));
+  svg.appendChild(svgEl("rect", { x: X - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
+  svg.appendChild(svgEl("text", { x: X, y: TOKY + 19, "text-anchor": "middle", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "the"));
+  var b1 = blkBlock(svg, "b2", X, CX, 566, "block 1");
+  var b2 = blkBlock(svg, "b2", X, CX, b1.top - 28, "block 2");
+  [b1, b2].forEach(function (b) {                     // the last token looks back at each earlier stream
+    var arrows = svgEl("g", { opacity: 0 }), paths = [], y = b.att.mid;
     PREV.forEach(function (t, i) {
-      var y = att.y1 + 22 + 23, x0 = BX - 2, x1 = px(i) + 6, h = 16 + (PREV.length - i) * 9;
-      var p = svgEl("path", { d: "M" + x0 + "," + y + " Q" + (x0 + x1) / 2 + "," + (y - h) + " " + x1 + "," + (y - 2), fill: "none", stroke: P_BLUE, "stroke-width": 2, "marker-end": "url(#tf-b)" });
+      var x0 = b.att.left - 2, x1 = px(i) + 5, h = 18 + (PREV.length - i) * 10;
+      var p = svgEl("path", { d: "M" + x0 + "," + y + " Q" + (x0 + x1) / 2 + "," + (y - h) + " " + x1 + "," + y, fill: "none", stroke: P_BLUE, "stroke-width": 2, "marker-end": "url(#b2-b)" });
       arrows.appendChild(p); paths.push(p);
     });
     svg.appendChild(arrows);
-    att.arrows = arrows; att.looks = paths;
-    return { att: att, mlp: mlp };
-  }
-  var b1 = block(268, 470, "block 1", 0), b2 = block(62, 264, "block 2", 2);
+    b.att.arrows = arrows; b.att.looks = paths;
+  });
   var PARTS = [b1.att, b1.mlp, b2.att, b2.mlp];
   var out = svgEl("g", { opacity: 0 });
-  out.appendChild(svgEl("rect", { x: X - 78, y: 6, width: 156, height: 34, rx: 17, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 }));
-  out.appendChild(svgEl("text", { x: X, y: 28, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, "next word: mat"));
+  out.appendChild(svgEl("rect", { x: X - 78, y: 12, width: 156, height: 34, rx: 17, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 }));
+  out.appendChild(svgEl("text", { x: X, y: 34, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, "next word: mat"));
   svg.appendChild(out);
   var ballLayer = svgEl("g", {}); svg.appendChild(ballLayer);
 
-  // tiny animation engine: run a list of timed jobs, cancel all on frame change
   var jobs = [], raf = null;
   function clearAnim() { cancelAnimationFrame(raf); raf = null; jobs = []; while (ballLayer.firstChild) ballLayer.removeChild(ballLayer.firstChild); }
   function ease(t) { return t * t * (3 - 2 * t); }
-  function along(path, color, start, dur, reverse) {          // a glowing dot that travels along a path
+  function along(path, color, start, dur, reverse) {
     var ball = svgEl("circle", { r: 6, fill: color, filter: "url(#tf-glow)", opacity: 0 });
     ballLayer.appendChild(ball);
     var len = path.getTotalLength();
@@ -776,8 +782,6 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
       if (!alldone) raf = requestAnimationFrame(tick);
     })(t0);
   }
-
-  // 0 = not yet, 1 = working now, 2 = done
   var STATE = [[0, 0, 0, 0, 0], [1, 0, 0, 0, 0], [2, 1, 0, 0, 0], [2, 2, 1, 0, 0], [2, 2, 2, 1, 0], [2, 2, 2, 2, 1]];
   var FRAMES = [
     'A sentence of five tokens, each with its own residual stream. We follow the last token, <span class="tok">the</span>, through two blocks. The other tokens go through the same blocks, but we keep them faint.',
@@ -796,12 +800,12 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
       p.box.classList.toggle("pulse", m === 1 && !p.arrows);
       if (p.arrows) p.arrows.setAttribute("opacity", m === 1 ? 1 : m === 2 ? 0.2 : 0);
       if (m === 1 && !reduce) {
-        if (p.looks) {                     // attention: dots flow in from every earlier stream, then out to the stream
-          p.looks.forEach(function (path, j) { along(path, P_BLUE, j * 120, 1000, true); });
-          along(p.outP, P_BLUE, 1350, 600);
-        } else {                           // MLP: a dot from the stream into the box, then back out
-          along(p.inP, P_GREEN, 0, 650);
-          along(p.outP, P_GREEN, 1150, 600);
+        if (p.looks) {
+          p.looks.forEach(function (path, j) { along(path, P_BLUE, j * 150, 1300, true); });
+          along(p.outP, P_BLUE, 1750, 900);
+        } else {
+          along(p.inP, P_GREEN, 0, 900);
+          along(p.outP, P_GREEN, 1500, 900);
         }
       }
     });
