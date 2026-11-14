@@ -85,6 +85,7 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 .primer-body .controls { display: flex; justify-content: center; gap: 8px; margin: 10px 0 4px; }
 .primer-body .controls button { font: 600 14px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); background: #fff; color: var(--rose-dark); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
 .primer-body .controls button:disabled { opacity: 0.35; cursor: default; }
+.primer-body .controls button[aria-pressed="true"] { background: var(--rose-dark); color: #fff; }
 .primer-body .say { min-height: 4.5em; font-size: 15px; line-height: 1.55; }
 .mlp-box { transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: no-preference) { .mlp-box.pulse { animation: mlp-pulse 0.9s ease-in-out infinite; } }
@@ -140,7 +141,7 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 
 
 <h2>How does a VLM read a picture and a question?</h2>
-<p>You give a VLM a picture and a question, and it writes an answer in words. Inside, it chops the picture and the question into small pieces called <b>tokens</b> and passes them up a stack of 36 <b>layers</b>. Small parts called <b>attention heads</b> let each token pull in information from the tokens before it. That is all you need to follow along. If you want to see how it works, open the two primers below.</p>
+<p>You give a VLM a picture and a question, and it writes an answer in words. Inside, it chops the picture and the question into small pieces called <b>tokens</b> and passes them up a stack of 36 <b>layers</b>. Small parts called <b>attention heads</b> let each token pull in information from the tokens before it. That is all you need to follow along. If you want to see how it works, open the primers below.</p>
 
 <details class="primer" id="primer-transformer">
 <summary>Primer: how does a transformer work?</summary>
@@ -158,12 +159,23 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <details class="primer" id="primer-attention">
 <summary>Primer: what does an attention head do?</summary>
 <div class="primer-body">
-<p>Attention is not one single step. Inside each block it is split into many small parts that work side by side, called <b>attention heads</b>. Our VLM has 32 of them in every block. Each head does a small search over the earlier tokens, using three things: a <b>query</b>, <b>keys</b>, and <b>values</b>. Click through to follow one head at the word <span class="tok">it</span>, step by step, and then see what it means to have many heads.</p>
+<p>Attention is not one single step. Inside each block it is split into many small parts that work side by side, called <b>attention heads</b>. Our VLM has 32 of them in every block. Each head does a small search over the earlier tokens, using three things: a <b>query</b>, <b>keys</b>, and <b>values</b>. Click through to follow one head at the word <span class="tok">it</span>, step by step.</p>
 <div class="stage"><svg id="att-svg" viewBox="0 0 900 490" role="img" aria-label="One attention head at the word it, comparing its query with the keys of earlier words and copying the value of the best match"></svg></div>
 <div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
 <div class="say" aria-live="polite"></div>
 </div>
 </details>
+
+<details class="primer" id="primer-multihead">
+<summary>Primer: what does it mean to have many heads?</summary>
+<div class="primer-body">
+<p>A layer does not have just one attention head. It has many, working side by side on the same words. Each head learns its own query, key, and value tables, so each one asks its own question. Pick a head to see what it looks for and what it brings back to the word <span class="tok">it</span>.</p>
+<div class="stage"><svg id="mh-svg" viewBox="0 0 900 290" role="img" aria-label="Attention of the word it over earlier words, for one head or for all three heads"></svg></div>
+<div class="controls"><button type="button" data-head="0">Head 1</button><button type="button" data-head="1">Head 2</button><button type="button" data-head="2">Head 3</button><button type="button" data-head="3">All heads</button></div>
+<div class="say" aria-live="polite"></div>
+</div>
+</details>
+
 
 <p>A VLM writes its answer one token at a time, and every new token goes through the whole stack again. This creates a real puzzle. The VLM has no notepad. It can't write down "I already said dog" and look at it later. Every time it starts a new word, it has to work out again, from the words it has already written, what is left to say.</p>
 <p class="question">So how does a VLM pick the next thing to describe, and how does it keep track of what it has already described?</p>
@@ -868,98 +880,101 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
   return g;
 }
 
-/* Primer 2: one attention head at the word "it", step by step: query, keys, scores, softmax, values, weighted sum.
-   Then several heads at once. All numbers are a cartoon. */
+/* Primer 2: one attention head at the word "it", step by step. Each stream branches into its own small tables:
+   the query from "it"; a key and a value from every earlier word, side by side. All numbers are a cartoon. */
 (function () {
   var svg = document.getElementById("att-svg"); if (!svg) return;
-  var ORANGE = "#D55E00", PURPLE = "#7B4FA0";
+  var ORANGE = "#D55E00";
   blkMarkers(svg, "q2");
-  (function () {                                       // arrowheads in the value and head colors
-    var defs = svgEl("defs", {});
-    [["o", ORANGE], ["p", PURPLE]].forEach(function (c) {
-      var m = svgEl("marker", { id: "q2-" + c[0], viewBox: "0 0 10 10", refX: 10, refY: 5, markerWidth: 9, markerHeight: 9, markerUnits: "userSpaceOnUse", orient: "auto" });
-      m.appendChild(svgEl("path", { d: "M0,0 L10,5 L0,10 z", fill: c[1] })); defs.appendChild(m);
-    });
-    svg.appendChild(defs);
+  (function () {
+    var defs = svgEl("defs", {}), m = svgEl("marker", { id: "q2-o", viewBox: "0 0 10 10", refX: 10, refY: 5, markerWidth: 9, markerHeight: 9, markerUnits: "userSpaceOnUse", orient: "auto" });
+    m.appendChild(svgEl("path", { d: "M0,0 L10,5 L0,10 z", fill: ORANGE })); defs.appendChild(m); svg.appendChild(defs);
   })();
   var TOK = ["The", "cat", "sat", "down", "because"], ME = "it";
-  var KEY = ["a little word", "an animal", "an action", "a direction", "a reason"];
   var VAL = ["the", "the cat", "sat", "down", "because"];
   var SCORE = [0.3, 4.1, 0.6, -0.2, 0.4];
   var e = SCORE.map(Math.exp), Z = e.reduce(function (a, b) { return a + b; }, 0);
-  var W = e.map(function (v) { return v / Z; });           // softmax of the scores
-  var PCT = W.map(function (w) { return Math.round(100 * w); });
-  var X = 800, TOKY = 452, YW = 410, YK = 362, YBAR = 334, BARH = 70, YWV = 236, YV = 196, YSUM = 108, SUMX = X - 110;
-  function px(i) { return 80 + i * 130; }
+  var W = e.map(function (v) { return v / Z; }), PCT = W.map(function (w) { return Math.round(100 * w); });
+  var X = 810, TOKY = 452, YBR = 430, YW = 400, YT = 358, YBAR = 316, BARH = 74, YSUM = 96, SUMX = X - 120, OFF = 30;
+  function px(i) { return 80 + i * 136; }
+  function kx(i) { return px(i) - OFF; }
+  function vx(i) { return px(i) + OFF; }
 
-  // streams and tokens
   TOK.forEach(function (t, i) {
-    svg.appendChild(svgEl("line", { x1: px(i), y1: TOKY, x2: px(i), y2: 60, stroke: P_ROSE, "stroke-width": 3, opacity: 0.35 }));
+    svg.appendChild(svgEl("line", { x1: px(i), y1: TOKY, x2: px(i), y2: 52, stroke: P_ROSE, "stroke-width": 3, opacity: 0.35 }));
     svg.appendChild(svgEl("rect", { x: px(i) - 42, y: TOKY, width: 84, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
     svg.appendChild(svgEl("text", { x: px(i), y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#333", "font-family": PM }, t));
   });
-  svg.appendChild(svgEl("line", { x1: X, y1: TOKY, x2: X, y2: 36, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#q2-r)" }));
+  svg.appendChild(svgEl("line", { x1: X, y1: TOKY, x2: X, y2: 32, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#q2-r)" }));
   svg.appendChild(svgEl("rect", { x: X - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
   svg.appendChild(svgEl("text", { x: X, y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, ME));
 
   var groups = {};
   function layer(name) { var g = svgEl("g", { opacity: 0 }); svg.appendChild(g); groups[name] = g; return g; }
-  function wbox(parent, x, y, sub, color) {                 // a learned table of numbers the stream passes through
-    parent.appendChild(svgEl("rect", { x: x - 24, y: y - 11, width: 48, height: 22, rx: 4, fill: "#fff", stroke: color, "stroke-width": 1.8 }));
-    var t = svgEl("text", { x: x, y: y, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: color, "font-family": PF });
+  function wbox(parent, x, sub, color) {
+    parent.appendChild(svgEl("rect", { x: x - 22, y: YW - 11, width: 44, height: 22, rx: 4, fill: "#fff", stroke: color, "stroke-width": 1.8 }));
+    var t = svgEl("text", { x: x, y: YW, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: color, "font-family": PF });
     t.innerHTML = 'W<tspan baseline-shift="sub" font-size="9">' + sub + "</tspan>";
     parent.appendChild(t);
   }
+  function branch(parent, x0, x1, color) {             // from the stream at YBR, over and up into a table, then up to the tag
+    var p = svgEl("path", { d: "M" + x0 + "," + YBR + " H" + x1 + " V" + (YW + 11), fill: "none", stroke: color, "stroke-width": 1.8 });
+    var q = svgEl("path", { d: "M" + x1 + "," + (YW - 11) + " V" + (YT + 13), fill: "none", stroke: color, "stroke-width": 1.8 });
+    parent.appendChild(p); parent.appendChild(q);
+    parent.appendChild(svgEl("circle", { cx: x0, cy: YBR, r: 3.5, fill: P_ROSE }));
+    return [p, q];
+  }
   // query
-  var wq = layer("wq"); wbox(wq, X, YW, "Q", P_ROSE);
-  var q = layer("q"); tag(q, X, YK, "Q", P_ROSE);
-  q.appendChild(svgEl("text", { x: X + 22, y: YK - 9, "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: P_ROSE, "font-family": PF }, "query"));
-  q.appendChild(svgEl("text", { x: X + 22, y: YK + 9, "dominant-baseline": "central", "font-size": 12, fill: "#333", "font-family": PF }, "who is \"it\"?"));
-  // keys
-  var wk = layer("wk"), k = layer("k");
+  var qg = layer("qg"), qPaths = branch(qg, X, X - OFF, P_ROSE);
+  wbox(qg, X - OFF, "Q", P_ROSE);
+  var q = layer("q"); tag(q, X - OFF, YT, "Q", P_ROSE);
+  q.appendChild(svgEl("text", { x: X + 14, y: YT - 9, "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: P_ROSE, "font-family": PF }, "query"));
+  q.appendChild(svgEl("text", { x: X + 14, y: YT + 9, "dominant-baseline": "central", "font-size": 12, fill: "#333", "font-family": PF }, "who is \"it\"?"));
+  // keys and values, side by side
+  var kvg = layer("kvg"), kPaths = [], vPaths = [];
   TOK.forEach(function (t, i) {
-    wbox(wk, px(i), YW, "K", P_BLUE);
-    tag(k, px(i), YK, "K", P_BLUE);
+    kPaths.push(branch(kvg, px(i), kx(i), P_BLUE)); vPaths.push(branch(kvg, px(i), vx(i), ORANGE));
+    wbox(kvg, kx(i), "K", P_BLUE); wbox(kvg, vx(i), "V", ORANGE);
   });
-  // scores: lines from Q to each K, then the number
+  var k = layer("k"), v = layer("v"), vtags = [];
+  TOK.forEach(function (t, i) {
+    tag(k, kx(i), YT, "K", P_BLUE);
+    var g = svgEl("g", {});
+    tag(g, vx(i), YT, "V", ORANGE);
+    v.appendChild(g); vtags.push(g);
+  });
+  var vtext = layer("vtext");
+  TOK.forEach(function (t, i) {
+    vtext.appendChild(svgEl("text", { x: vx(i), y: YT - 24, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11.5, fill: ORANGE, "font-family": PF }, "\"" + VAL[i] + "\""));
+  });
+  // scores
   var match = layer("match"), mpaths = [];
   TOK.forEach(function (t, i) {
-    var x0 = X - 2, x1 = px(i) + 2, h = 24 + (TOK.length - i) * 12;
-    var p = svgEl("path", { d: "M" + x0 + "," + (YK - 13) + " Q" + (x0 + x1) / 2 + "," + (YK - 13 - h) + " " + x1 + "," + (YK - 13), fill: "none", stroke: P_BLUE, "stroke-width": 1.5, "stroke-dasharray": "4 4" });
+    var x0 = X - OFF, x1 = kx(i), h = 26 + (TOK.length - i) * 13;
+    var p = svgEl("path", { d: "M" + x0 + "," + (YT - 13) + " Q" + (x0 + x1) / 2 + "," + (YT - 13 - h) + " " + x1 + "," + (YT - 13), fill: "none", stroke: P_BLUE, "stroke-width": 1.5, "stroke-dasharray": "4 4" });
     match.appendChild(p); mpaths.push(p);
   });
   var sc = layer("sc");
   TOK.forEach(function (t, i) {
-    sc.appendChild(svgEl("text", { x: px(i) + 20, y: YK, "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: P_BLUE, "font-family": PF }, "score " + SCORE[i].toFixed(1)));
+    sc.appendChild(svgEl("text", { x: kx(i), y: YT + 24, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: P_BLUE, "font-family": PF }, SCORE[i].toFixed(1)));
   });
-  // softmax bars
+  // softmax bars, above each key
   var bars = layer("bars"), barRects = [], barText = [];
   TOK.forEach(function (t, i) {
-    var r = svgEl("rect", { x: px(i) - 18, y: YBAR, width: 36, height: 0, fill: P_BLUE, opacity: 0.35 + 0.65 * W[i] });
-    var tx = svgEl("text", { x: px(i), y: YBAR - 8, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: P_BLUE, "font-family": PF }, PCT[i] + "%");
+    var r = svgEl("rect", { x: kx(i) - 14, y: YBAR, width: 28, height: 0, fill: P_BLUE, opacity: 0.35 + 0.65 * W[i] });
+    var tx = svgEl("text", { x: kx(i), y: YBAR - 8, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12.5, "font-weight": 700, fill: P_BLUE, "font-family": PF }, PCT[i] + "%");
     bars.appendChild(r); bars.appendChild(tx); barRects.push(r); barText.push(tx);
   });
-  bars.appendChild(svgEl("text", { x: 660, y: YBAR - 46, "font-size": 12, fill: P_GRAY, "font-family": PF }, "attention after softmax"));
-  bars.appendChild(svgEl("text", { x: 660, y: YBAR - 30, "font-size": 12, fill: P_GRAY, "font-family": PF }, "(adds up to 100%)"));
-  function setBars(k) {
-    barRects.forEach(function (r, i) { var h = 4 + (BARH - 4) * W[i] * k; r.setAttribute("y", YBAR - h); r.setAttribute("height", h); barText[i].setAttribute("y", YBAR - h - 9); });
+  function setBars(kk) {
+    barRects.forEach(function (r, i) { var h = 3 + (BARH - 3) * W[i] * kk; r.setAttribute("y", YBAR - h); r.setAttribute("height", h); barText[i].setAttribute("y", YBAR - h - 9); });
   }
-  // values
-  var wv = layer("wv"), v = layer("v"), vtags = [];
+  // weighted values flow to the sum
+  var wt = layer("wt"), wpaths = [];
   TOK.forEach(function (t, i) {
-    wbox(wv, px(i), YWV, "V", ORANGE);
-    var g = svgEl("g", {});
-    tag(g, px(i), YV, "V", ORANGE);
-    g.appendChild(svgEl("text", { x: px(i) + 20, y: YV, "dominant-baseline": "central", "font-size": 12, fill: ORANGE, "font-family": PF }, "\"" + VAL[i] + "\""));
-    v.appendChild(g); vtags.push(g);
-  });
-  // weighting and sum
-  var wt = layer("wt"), vpaths = [];
-  TOK.forEach(function (t, i) {
-    wt.appendChild(svgEl("text", { x: px(i), y: YV + 26, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: ORANGE, "font-family": PF }, "× " + PCT[i] + "%"));
-    var x0 = px(i), top = YSUM + 6 + (TOK.length - i) * 4;
-    var p = svgEl("path", { d: "M" + x0 + "," + (YV - 13) + " C" + x0 + "," + top + " " + (SUMX - 80) + "," + YSUM + " " + (SUMX - 15) + "," + YSUM, fill: "none", stroke: ORANGE, "stroke-width": 0.6 + 5 * W[i], opacity: 0.25 + 0.75 * W[i], "marker-end": "url(#q2-o)" });
-    wt.appendChild(p); vpaths.push(p);
+    wt.appendChild(svgEl("text", { x: vx(i), y: YT - 24, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: ORANGE, "font-family": PF }, "× " + PCT[i] + "%"));
+    var x0 = vx(i), top = YSUM + 8 + (TOK.length - i) * 4;
+    var p = svgEl("path", { d: "M" + x0 + "," + (YT - 36) + " C" + x0 + "," + top + " " + (SUMX - 80) + "," + YSUM + " " + (SUMX - 15) + "," + YSUM, fill: "none", stroke: ORANGE, "stroke-width": 0.6 + 5 * W[i], opacity: 0.25 + 0.75 * W[i], "marker-end": "url(#q2-o)" });
+    wt.appendChild(p); wpaths.push(p);
   });
   wt.appendChild(svgEl("circle", { cx: SUMX, cy: YSUM, r: 14, fill: "#fff", stroke: ORANGE, "stroke-width": 2 }));
   wt.appendChild(svgEl("text", { x: SUMX, y: YSUM, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 16, "font-weight": 700, fill: ORANGE, "font-family": PF }, "Σ"));
@@ -969,66 +984,50 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
   plus.appendChild(svgEl("circle", { cx: X, cy: YSUM, r: BLK.r, fill: "#fff", stroke: P_ROSE, "stroke-width": 2.5 }));
   plus.appendChild(svgEl("path", { d: "M" + (X - 6) + "," + YSUM + " H" + (X + 6) + " M" + X + "," + (YSUM - 6) + " V" + (YSUM + 6), stroke: P_ROSE, "stroke-width": 2.5, "stroke-linecap": "round" }));
   var res = layer("res");
-  res.appendChild(svgEl("rect", { x: X - 170, y: 46, width: 140, height: 30, rx: 15, fill: P_ROSE }));
-  res.appendChild(svgEl("text", { x: X - 100, y: 61, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: "#fff", "font-family": PF }, "\"it\" = the cat"));
-
-  // several heads at once
-  var HEADS = [[1, P_BLUE, "head 1: who is \"it\"?", 330], [4, PURPLE, "head 2: what came just before?", 262], [2, ORANGE, "head 3: what happened?", 194]];
-  var multi = layer("multi"), hpaths = [], hsum = [];
-  HEADS.forEach(function (h) {
-    var x1 = px(h[0]), y = h[3], peak = y - 34 - (TOK.length - h[0]) * 6;
-    multi.appendChild(svgEl("path", { d: "M" + (X - 2) + "," + y + " Q" + (X + x1) / 2 + "," + peak + " " + (x1 + 3) + "," + y, fill: "none", stroke: h[1], "stroke-width": 2.5, "marker-end": "url(#q2-" + (h[1] === P_BLUE ? "b" : h[1] === PURPLE ? "p" : "o") + ")" }));
-    var back = svgEl("path", { d: "M" + (x1 + 3) + "," + y + " Q" + (X + x1) / 2 + "," + peak + " " + (X - 2) + "," + y, fill: "none", stroke: "none" });
-    multi.appendChild(back); hpaths.push(back);
-    multi.appendChild(svgEl("text", { x: (X + x1) / 2, y: peak + 4, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12.5, "font-weight": 700, fill: h[1], "font-family": PF }, h[2]));
-    var up = svgEl("path", { d: "M" + X + "," + y + " V" + (YSUM + BLK.r), fill: "none", stroke: "none" });
-    multi.appendChild(up); hsum.push(up);
-    multi.appendChild(svgEl("circle", { cx: X, cy: y, r: 6, fill: h[1] }));
-  });
+  res.appendChild(svgEl("rect", { x: X - 180, y: 34, width: 140, height: 30, rx: 15, fill: P_ROSE }));
+  res.appendChild(svgEl("text", { x: X - 110, y: 49, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: "#fff", "font-family": PF }, "\"it\" = the cat"));
   var mv = makeMover(svg, "q2-glow");
   mv.front();
 
   var SHOW = [
     [],
-    ["wq", "q"],
-    ["wq", "q", "wk", "k"],
-    ["q", "k", "match", "sc"],
-    ["q", "k", "sc", "bars"],
-    ["q", "k", "bars", "wv", "v"],
-    ["q", "k", "bars", "v", "wt", "plus"],
-    ["q", "k", "bars", "v", "wt", "plus", "res"],
-    ["multi", "plus"]
+    ["qg", "q"],
+    ["q", "kvg", "k", "v", "vtext"],
+    ["q", "k", "v", "match", "sc"],
+    ["q", "k", "v", "sc", "bars"],
+    ["q", "k", "v", "bars", "wt", "plus"],
+    ["q", "k", "v", "bars", "wt", "plus", "res"]
   ];
   var FRAMES = [
     'Each word has its own residual stream. One attention head sits on the stream of the last word, <span class="tok">it</span>, and can read from every word before it. Let\'s follow exactly what it computes.',
-    '<b>1. Query.</b> The head passes the stream of <span class="tok">it</span> through a small table of numbers it learned in training, <b>W<sub>Q</sub></b>. Out comes the <b>query</b>: a description of what this word is looking for, roughly <i>"who is it?"</i>',
-    '<b>2. Keys.</b> The stream of every earlier word passes through a second learned table, <b>W<sub>K</sub></b>. Out comes a <b>key</b> for each word: a label of what it is. Here, <i>"an animal"</i> for <span class="tok">cat</span>, <i>"an action"</i> for <span class="tok">sat</span>, and so on.',
-    '<b>3. Scores.</b> The head compares the query with each key: it multiplies them number by number and adds it all up (a <b>dot product</b>). A good match gives a big score. <span class="tok">cat</span> scores highest. (All numbers here are a cartoon.)',
+    '<b>1. Query.</b> The stream of <span class="tok">it</span> passes through a small table of numbers the head learned in training, <b>W<sub>Q</sub></b>. Out comes the <b>query</b>: a description of what this word is looking for, roughly <i>"who is it?"</i>',
+    '<b>2. Keys and values.</b> At the same time, the stream of every earlier word passes through two more learned tables, side by side. <b>W<sub>K</sub></b> makes its <b>key</b>, a label of what the word is. <b>W<sub>V</sub></b> makes its <b>value</b>, the information it will hand over if it gets picked. The key is only used to be found. The value is only used once found.',
+    '<b>3. Scores.</b> The head compares the query with each key: it multiplies them number by number and adds it all up (a <b>dot product</b>). A good match gives a big score, and <span class="tok">cat</span> scores highest. The values wait. (All numbers here are a cartoon.)',
     '<b>4. Softmax.</b> The scores are turned into shares that add up to 100%. This step is called <b>softmax</b>, and it lets the biggest score take most of the share. <span class="tok">cat</span> now gets ' + PCT[1] + '% of the attention.',
-    '<b>5. Values.</b> Every earlier stream also passes through a third learned table, <b>W<sub>V</sub></b>. Out comes a <b>value</b>: the information that word hands over if it gets picked.',
-    '<b>6. Weighted sum.</b> Each value is multiplied by its share: ' + PCT[1] + '% of <span class="tok">cat</span>\'s value, ' + PCT[2] + '% of <span class="tok">sat</span>\'s, and so on. Then they are all added up (Σ), and the sum is added to the stream of <span class="tok">it</span>.',
-    'Now the stream of <span class="tok">it</span> knows that it means the cat. In short: the <b>query</b> is what a word is looking for, the <b>key</b> is how a word can be found, softmax decides <b>how much</b> to take from each word, and the <b>value</b> is what gets taken. In our puzzle, the word <span class="tok">star</span> asks <i>"where is a star?"</i>, the keys of the picture tokens say which shape each one holds, and the values carry where it is.',
-    '<b>Many heads at once.</b> A layer does not have just one head. It has many, side by side, and each one learns its own three tables, so each asks its own question. One head might find who <span class="tok">it</span> is, another the word just before, another the action. Their results are all added to the stream. This is called <b>multi-head attention</b>. Our VLM has 32 heads in every layer, 1,152 in all, and this project is about finding the few that do one job each.'
+    '<b>5. Weighted sum.</b> Now the values come in. Each value is multiplied by its word\'s share: ' + PCT[1] + '% of <span class="tok">cat</span>\'s value, ' + PCT[2] + '% of <span class="tok">sat</span>\'s, and so on. They are all added up (Σ), and the sum is added to the stream of <span class="tok">it</span>.',
+    'Now the stream of <span class="tok">it</span> knows that it means the cat. In short: the <b>query</b> is what a word is looking for, the <b>key</b> is how a word can be found, softmax decides <b>how much</b> to take from each word, and the <b>value</b> is what gets taken. In our puzzle, the word <span class="tok">star</span> asks <i>"where is a star?"</i>, the keys of the picture tokens say which shape each one holds, and the values carry where it is.'
   ];
   makeStepper(document.getElementById("primer-attention"), FRAMES, function (n) {
     mv.clear();
     Object.keys(groups).forEach(function (g) { groups[g].setAttribute("opacity", SHOW[n].indexOf(g) >= 0 ? 1 : 0); });
     setBars(n >= 4 ? 1 : 0);
-    vtags.forEach(function (g, i) { g.setAttribute("opacity", n >= 6 ? 0.25 + 0.75 * W[i] : 1); });
+    vtags.forEach(function (g, i) { g.setAttribute("opacity", n >= 5 ? 0.25 + 0.75 * W[i] : 1); });
     if (mv.reduce) return;
     if (n === 1) {
       groups.q.setAttribute("opacity", 0);
-      mv.along(mv.path("M" + X + "," + TOKY + " V" + (YW + 11)), P_ROSE, 0, 600, 7);
-      mv.along(mv.path("M" + X + "," + (YW - 11) + " V" + (YK + 13)), P_ROSE, 650, 450, 7);
-      mv.at(1100, function () { groups.q.setAttribute("opacity", 1); });
+      mv.along(mv.path("M" + X + "," + TOKY + " V" + YBR), P_ROSE, 0, 400, 7);
+      mv.along(qPaths[0], P_ROSE, 400, 500, 7); mv.along(qPaths[1], P_ROSE, 950, 300, 7);
+      mv.at(1250, function () { groups.q.setAttribute("opacity", 1); });
     }
     if (n === 2) {
-      groups.k.setAttribute("opacity", 0);
+      groups.k.setAttribute("opacity", 0); groups.v.setAttribute("opacity", 0); groups.vtext.setAttribute("opacity", 0);
       TOK.forEach(function (t, i) {
-        mv.along(mv.path("M" + px(i) + "," + TOKY + " V" + (YW + 11)), P_ROSE, i * 80, 600, 6);
-        mv.along(mv.path("M" + px(i) + "," + (YW - 11) + " V" + (YK + 13)), P_BLUE, 650 + i * 80, 450, 6);
+        var d = i * 90;
+        mv.along(mv.path("M" + px(i) + "," + TOKY + " V" + YBR), P_ROSE, d, 400, 6);
+        mv.along(kPaths[i][0], P_BLUE, d + 400, 450, 6); mv.along(kPaths[i][1], P_BLUE, d + 900, 300, 6);
+        mv.along(vPaths[i][0], ORANGE, d + 400, 450, 6); mv.along(vPaths[i][1], ORANGE, d + 900, 300, 6);
       });
-      mv.at(1500, function () { groups.k.setAttribute("opacity", 1); });
+      mv.at(1600, function () { groups.k.setAttribute("opacity", 1); groups.v.setAttribute("opacity", 1); groups.vtext.setAttribute("opacity", 1); });
     }
     if (n === 3) {
       groups.sc.setAttribute("opacity", 0);
@@ -1037,29 +1036,66 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     }
     if (n === 4) { setBars(0); mv.tween(200, 1000, setBars); }
     if (n === 5) {
-      groups.v.setAttribute("opacity", 0);
-      TOK.forEach(function (t, i) {
-        mv.along(mv.path("M" + px(i) + "," + (YBAR + 2) + " V" + (YWV + 11)), P_ROSE, i * 80, 500, 6);
-        mv.along(mv.path("M" + px(i) + "," + (YWV - 11) + " V" + (YV + 13)), ORANGE, 550 + i * 80, 400, 6);
-      });
-      mv.at(1300, function () { groups.v.setAttribute("opacity", 1); });
-    }
-    if (n === 6) {
       vtags.forEach(function (g) { g.setAttribute("opacity", 1); });
-      mv.tween(0, 600, function (k) { vtags.forEach(function (g, i) { g.setAttribute("opacity", 1 - k * (1 - (0.25 + 0.75 * W[i]))); }); });
-      vpaths.forEach(function (p, i) { mv.along(p, ORANGE, 700 + i * 90, 1300, 2 + 9 * W[i]); });
+      mv.tween(0, 600, function (kk) { vtags.forEach(function (g, i) { g.setAttribute("opacity", 1 - kk * (1 - (0.25 + 0.75 * W[i]))); }); });
+      wpaths.forEach(function (p, i) { mv.along(p, ORANGE, 700 + i * 90, 1300, 2 + 9 * W[i]); });
       mv.along(sumPath, ORANGE, 2300, 600, 8);
       mv.rest(X, YSUM, P_ROSE, 2900, 7);
     }
-    if (n === 8) {
-      HEADS.forEach(function (h, i) {
-        mv.along(hpaths[i], h[1], i * 250, 1200, 6);
-        mv.along(hsum[i], h[1], 1600 + i * 150, 700, 6);
-      });
-      mv.rest(X, YSUM, P_ROSE, 2600, 7);
-    }
     mv.run();
   }, 4600);
+})();
+
+/* Primer 2b: many heads. Pick a head to see what it looks for, where its attention goes, and what it adds. */
+(function () {
+  var svg = document.getElementById("mh-svg"); if (!svg) return;
+  var PURPLE = "#7B4FA0", ORANGE = "#D55E00";
+  var TOK = ["The", "cat", "sat", "down", "because"], X = 770, TOKY = 250, BASE = 228, BARH = 120;
+  function px(i) { return 80 + i * 130; }
+  var HEADS = [
+    { name: "Head 1", q: "who is \"it\"?", w: [2, 92, 3, 1, 2], adds: "\"it\" = the cat", c: P_BLUE },
+    { name: "Head 2", q: "what came just before?", w: [2, 2, 3, 8, 85], adds: "a reason is being given", c: PURPLE },
+    { name: "Head 3", q: "what happened?", w: [2, 4, 80, 12, 2], adds: "the action was sitting down", c: ORANGE }
+  ];
+  TOK.forEach(function (t, i) {
+    svg.appendChild(svgEl("rect", { x: px(i) - 42, y: TOKY, width: 84, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
+    svg.appendChild(svgEl("text", { x: px(i), y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#333", "font-family": PM }, t));
+    svg.appendChild(svgEl("line", { x1: px(i) - 46, y1: BASE, x2: px(i) + 46, y2: BASE, stroke: "#ddd" }));
+  });
+  svg.appendChild(svgEl("rect", { x: X - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
+  svg.appendChild(svgEl("text", { x: X, y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "it"));
+  svg.appendChild(svgEl("text", { x: 20, y: 22, "font-size": 12, fill: P_GRAY, "font-family": PF }, "how much attention the word \"it\" pays to each earlier word"));
+  var barLayer = svgEl("g", {}), addLayer = svgEl("g", {});
+  svg.appendChild(barLayer); svg.appendChild(addLayer);
+  function draw(sel) {                                 // sel: 0, 1, 2 for one head, 3 for all heads
+    while (barLayer.firstChild) barLayer.removeChild(barLayer.firstChild);
+    while (addLayer.firstChild) addLayer.removeChild(addLayer.firstChild);
+    var list = sel === 3 ? HEADS : [HEADS[sel]], bw = sel === 3 ? 22 : 44;
+    list.forEach(function (h, j) {
+      TOK.forEach(function (t, i) {
+        var off = sel === 3 ? (j - 1) * (bw + 4) : 0, hgt = 3 + (BARH - 3) * h.w[i] / 100;
+        barLayer.appendChild(svgEl("rect", { x: px(i) + off - bw / 2, y: BASE - hgt, width: bw, height: hgt, rx: 3, fill: h.c, opacity: 0.35 + 0.65 * h.w[i] / 100 }));
+        if (sel !== 3 || h.w[i] >= 50) barLayer.appendChild(svgEl("text", { x: px(i) + off, y: BASE - hgt - 10, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: h.c, "font-family": PF }, h.w[i] + "%"));
+      });
+      var y = sel === 3 ? 74 + j * 46 : 120;
+      addLayer.appendChild(svgEl("rect", { x: X - 100, y: y - 17, width: 200, height: 34, rx: 17, fill: h.c }));
+      addLayer.appendChild(svgEl("text", { x: X, y: y, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12.5, "font-weight": 700, fill: "#fff", "font-family": PF }, h.adds));
+    });
+    addLayer.appendChild(svgEl("text", { x: X, y: sel === 3 ? 222 : 160, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: P_GRAY, "font-family": PF }, sel === 3 ? "all three are added to \"it\"" : "added to the stream of \"it\""));
+  }
+  var root = document.getElementById("primer-multihead"), say = root.querySelector(".say"), btns = root.querySelectorAll("[data-head]");
+  var TEXT = [
+    '<b>Head 1</b> asks <i>"who is it?"</i>. Its query matches the key of <span class="tok">cat</span>, so almost all of its attention goes there, and it brings back that <span class="tok">it</span> means the cat.',
+    '<b>Head 2</b> asks <i>"what came just before?"</i>. Its own query matches a different key, so it looks at <span class="tok">because</span> and brings back that a reason is being given.',
+    '<b>Head 3</b> asks <i>"what happened?"</i>. It looks mostly at <span class="tok">sat</span> and brings back the action.',
+    '<b>All heads at once.</b> The three heads run side by side, on the same words, at the same time. Each has its own three learned tables, so each asks its own question and spreads its attention its own way. Their results are all added to the stream of <span class="tok">it</span>. This is <b>multi-head attention</b>. Our VLM has 32 heads in every layer, 1,152 in all, and this project is about finding the few that do one job each.'
+  ];
+  function pick(sel) {
+    draw(sel); say.innerHTML = TEXT[sel];
+    btns.forEach(function (b) { b.setAttribute("aria-pressed", +b.getAttribute("data-head") === sel ? "true" : "false"); });
+  }
+  btns.forEach(function (b) { b.addEventListener("click", function () { pick(+b.getAttribute("data-head")); }); });
+  pick(0);
 })();
 
 /* Primer 3: activation patching. Two runs; save a state from the source, paste it into the target at the same layer. */
