@@ -631,7 +631,7 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
 })();
 
 /* Primer animations. Each one is a list of frames; Back, Next, and Play step through them. */
-function makeStepper(root, frames, draw) {
+function makeStepper(root, frames, draw, interval) {
   var at = 0, timer = null, say = root.querySelector(".say");
   var btn = function (a) { return root.querySelector('[data-act="' + a + '"]'); };
   function show(n) {
@@ -646,7 +646,7 @@ function makeStepper(root, frames, draw) {
     if (timer) { stop(); return; }
     if (at === frames.length - 1) show(0);
     btn("play").textContent = "Pause";
-    (function tick() { timer = setTimeout(function () { if (at < frames.length - 1) { show(at + 1); tick(); } else stop(); }, 3200); })();
+    (function tick() { timer = setTimeout(function () { if (at < frames.length - 1) { show(at + 1); tick(); } else stop(); }, interval || 3200); })();
   }
   btn("prev").addEventListener("click", function () { stop(); show(at - 1); });
   btn("next").addEventListener("click", function () { stop(); show(at + 1); });
@@ -695,7 +695,7 @@ function blkPart(svg, id, X, cx, yBranch, name, color, key) {
   [inP, outP, box, label, dot].forEach(function (e) { g.appendChild(e); });
   svg.appendChild(g);
   svg.appendChild(plus);                                // the plus never fades, so the stream never shows through it
-  return { g: g, box: box, inP: inP, outP: outP, yPlus: yPlus, mid: top + BLK.boxH / 2, left: cx - BLK.boxW / 2 };
+  return { g: g, box: box, inP: inP, outP: outP, yPlus: yPlus, yBranch: yBranch, mid: top + BLK.boxH / 2, left: cx - BLK.boxW / 2 };
 }
 function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention and MLP parts and the block's frame
   var att = blkPart(svg, id, X, cx, yBranch, "Attention", P_BLUE, "b");
@@ -728,22 +728,18 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
 })();
 
 /* Primer 1b: a sentence through two blocks, drawn for the last token only. Earlier tokens keep faint streams.
-   Glowing dots show information moving. */
+   One ball carries the last token's stream up the model: maroon on the stream, blue inside attention, green inside the MLP. */
 (function () {
   var svg = document.getElementById("tf-svg"); if (!svg) return;
-  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   blkMarkers(svg, "b2");
-  var defs = svgEl("defs", {}), f = svgEl("filter", { id: "tf-glow", x: "-100%", y: "-100%", width: "300%", height: "300%" });
-  f.innerHTML = '<feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>';
-  defs.appendChild(f); svg.appendChild(defs);
-  var PREV = ["The", "cat", "sat", "on"], X = 730, CX = 590, TOKY = 630;
+  var PREV = ["The", "cat", "sat", "on"], X = 730, CX = 590, TOKY = 630, TOPY = 50;
   function px(i) { return 80 + i * 100; }
   PREV.forEach(function (t, i) {
     svg.appendChild(svgEl("line", { x1: px(i), y1: TOKY, x2: px(i), y2: 92, stroke: P_ROSE, "stroke-width": 3, opacity: 0.3 }));
     svg.appendChild(svgEl("rect", { x: px(i) - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
     svg.appendChild(svgEl("text", { x: px(i), y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#333", "font-family": PM }, t));
   });
-  svg.appendChild(svgEl("line", { x1: X, y1: TOKY, x2: X, y2: 50, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#b2-r)" }));
+  svg.appendChild(svgEl("line", { x1: X, y1: TOKY, x2: X, y2: TOPY, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#b2-r)" }));
   svg.appendChild(svgEl("rect", { x: X - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
   svg.appendChild(svgEl("text", { x: X, y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "the"));
   var b1 = blkBlock(svg, "b2", X, CX, 604, "block 1");
@@ -763,61 +759,56 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
   out.appendChild(svgEl("rect", { x: X - 78, y: 14, width: 156, height: 34, rx: 17, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 }));
   out.appendChild(svgEl("text", { x: X, y: 31, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, "next word: mat"));
   svg.appendChild(out);
-  var ballLayer = svgEl("g", {}); svg.appendChild(ballLayer);
+  var mv = makeMover(svg, "tf-glow");
+  mv.front();
 
-  var jobs = [], raf = null;
-  function clearAnim() { cancelAnimationFrame(raf); raf = null; jobs = []; while (ballLayer.firstChild) ballLayer.removeChild(ballLayer.firstChild); }
-  function ease(t) { return t * t * (3 - 2 * t); }
-  function along(path, color, start, dur, reverse) {
-    var ball = svgEl("circle", { r: 6, fill: color, filter: "url(#tf-glow)", opacity: 0 });
-    ballLayer.appendChild(ball);
-    var len = path.getTotalLength();
-    jobs.push(function (t) {
-      var k = (t - start) / dur;
-      if (k < 0 || k > 1) { ball.setAttribute("opacity", 0); return k > 1; }
-      var pt = path.getPointAtLength(len * ease(reverse ? 1 - k : k));
-      ball.setAttribute("cx", pt.x); ball.setAttribute("cy", pt.y); ball.setAttribute("opacity", 1);
-      return false;
-    });
-  }
-  function run() {
-    var t0 = performance.now();
-    (function tick(now) {
-      var t = now - t0, alldone = true;
-      jobs.forEach(function (j) { if (!j(t)) alldone = false; });
-      if (!alldone) raf = requestAnimationFrame(tick);
-    })(t0);
-  }
+  function seg(y0, y1) { return mv.path("M" + X + "," + y0 + " V" + y1); }   // a stretch of the last token's stream
+  // where the ball starts in each frame: the token, then each plus in turn
+  var STARTS = [TOKY, b1.att.yPlus, b1.mlp.yPlus, b2.att.yPlus, b2.mlp.yPlus];
   var STATE = [[0, 0, 0, 0, 0], [1, 0, 0, 0, 0], [2, 1, 0, 0, 0], [2, 2, 1, 0, 0], [2, 2, 2, 1, 0], [2, 2, 2, 2, 1]];
   var FRAMES = [
     'A sentence of five tokens, each with its own residual stream. We follow the last token, <span class="tok">the</span>, through two blocks. The other tokens go through the same blocks, but we keep them faint.',
-    '<b>Block 1, attention.</b> The last token looks back at the streams of the tokens before it, and information flows in from them (the glowing dots). Attention adds what it found back to the stream, at the plus sign. A token can only look back, never ahead.',
-    '<b>Block 1, MLP.</b> The MLP takes this token\'s stream and works on it alone. Nothing comes in from other tokens. Its result is added to the stream too.',
-    '<b>Block 2, attention.</b> The same two steps, one block higher. The last token looks back again, and adds what it found. Every block adds to the stream, and nothing is erased.',
+    '<b>Block 1, attention.</b> The stream (maroon) flows into attention. Attention looks back at the tokens before it, and their information flows in (blue). The result flows out and is added to the stream at the plus. A token can only look back, never ahead.',
+    '<b>Block 1, MLP.</b> The stream flows on into the MLP, which works on this token alone (green). Nothing comes in from other tokens. The result is added back to the stream.',
+    '<b>Block 2, attention.</b> The same two steps, one block higher. The stream, now holding more than the word itself, flows into attention, which looks back again.',
     '<b>Block 2, MLP.</b> The MLP works on the stream once more and adds its result.',
     'At the top, the last token\'s stream, with everything that was added to it, is turned into the next word, <span class="tok">mat</span>. The model adds it to the end of the sentence and runs everything again for the word after.'
   ];
+  function setStatic(p, m) {
+    p.g.setAttribute("opacity", m === 0 ? 0.25 : 1);
+    p.box.classList.remove("pulse");
+    if (p.arrows) p.arrows.setAttribute("opacity", m === 2 ? 0.2 : 0);
+  }
   makeStepper(document.getElementById("primer-transformer"), FRAMES, function (n) {
-    clearAnim();
+    mv.clear();
     var s = STATE[n];
-    PARTS.forEach(function (p, i) {
-      var m = s[i];
-      p.g.setAttribute("opacity", m === 0 ? 0.25 : m === 1 ? 1 : 0.6);
-      p.box.classList.toggle("pulse", m === 1);
-      if (p.arrows) p.arrows.setAttribute("opacity", m === 1 ? 1 : m === 2 ? 0.2 : 0);
-      if (m === 1 && !reduce) {
-        if (p.looks) {
-          p.looks.forEach(function (path, j) { along(path, P_BLUE, j * 150, 1300, true); });
-          along(p.outP, P_BLUE, 1750, 900);
-        } else {
-          along(p.inP, P_GREEN, 0, 900);
-          along(p.outP, P_GREEN, 1500, 900);
-        }
-      }
-    });
-    out.setAttribute("opacity", s[4]);
-    if (jobs.length) run();
-  });
+    PARTS.forEach(function (p, i) { setStatic(p, s[i]); });
+    out.setAttribute("opacity", n === 5 && mv.reduce ? 1 : 0);
+    if (n === 0) return;
+    var y0 = STARTS[n - 1];
+    if (n === 5) {                                   // up and out into the next word
+      mv.along(seg(y0, TOPY + 4), P_ROSE, 0, 1100, 7);
+      mv.at(1100, function () { out.setAttribute("opacity", 1); });
+      mv.run(); return;
+    }
+    var p = PARTS[n - 1], isAtt = !!p.looks, c = isAtt ? P_BLUE : P_GREEN;
+    if (mv.reduce) { if (p.arrows) p.arrows.setAttribute("opacity", 1); return; }
+    var t = 0;
+    mv.along(seg(y0, p.yBranch), P_ROSE, t, 700, 7); t += 700;          // up the stream to the branch
+    mv.along(p.inP, c, t, 650, 7); t += 650;                            // into the box
+    mv.at(t, function () { p.box.classList.add("pulse"); });
+    if (isAtt) {
+      mv.at(t, function () { p.arrows.setAttribute("opacity", 1); });   // look back
+      p.looks.forEach(function (path, j) { mv.along(path, P_BLUE, t + 250 + j * 140, 1200, 5, true); });
+      t += 250 + 3 * 140 + 1200 + 150;
+    } else {
+      t += 1000;                                                        // the MLP works on its own
+    }
+    mv.at(t, function () { p.box.classList.remove("pulse"); });
+    mv.along(p.outP, c, t, 700, 7); t += 700;                           // out to the plus
+    mv.rest(X, p.yPlus, P_ROSE, t, 7);                                  // added: the ball is part of the stream again
+    mv.run();
+  }, 5200);
 })();
 
 /* Shared: glowing dots that travel along paths, cancelled on every frame change. */
@@ -832,7 +823,13 @@ function makeMover(svg, glowId) {
     layer: layer, reduce: reduce,
     front: function () { svg.appendChild(layer); },
     clear: function () { cancelAnimationFrame(raf); raf = null; jobs = []; while (layer.firstChild) layer.removeChild(layer.firstChild); },
-    along: function (path, color, start, dur, r) {
+    path: function (d) { var p = svgEl("path", { d: d, fill: "none", stroke: "none" }); layer.appendChild(p); return p; },
+    rest: function (x, y, color, start, r) {          // a ball that appears at a point and stays
+      var ball = svgEl("circle", { cx: x, cy: y, r: r || 6, fill: color, filter: "url(#" + glowId + ")", opacity: 0 });
+      layer.appendChild(ball);
+      jobs.push(function (t) { if (t >= start) { ball.setAttribute("opacity", 1); return true; } return false; });
+    },
+    along: function (path, color, start, dur, r, reverse) {
       if (reduce) return;
       var ball = svgEl("circle", { r: r || 6, fill: color, filter: "url(#" + glowId + ")", opacity: 0 });
       layer.appendChild(ball);
@@ -840,7 +837,7 @@ function makeMover(svg, glowId) {
       jobs.push(function (t) {
         var k = (t - start) / dur;
         if (k < 0 || k > 1) { ball.setAttribute("opacity", 0); return k > 1; }
-        var pt = path.getPointAtLength(len * ease(k));
+        var pt = path.getPointAtLength(len * ease(reverse ? 1 - k : k));
         ball.setAttribute("cx", pt.x); ball.setAttribute("cy", pt.y); ball.setAttribute("opacity", 1);
         return false;
       });
