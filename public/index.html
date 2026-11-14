@@ -197,7 +197,7 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <h2>What is the plan?</h2>
 <p>Here is the answer in one picture. Click through it one step at a time. In the sections after it, we explain each step and how we found it.</p>
 <figure id="plan" aria-label="Interactive walk-through of the plan">
-  <div class="stage"><svg id="plan-svg" viewBox="0 0 1060 400" role="img" aria-label="Panel strip, question tokens, and answer tokens, with arrows for each step and the layers where it happens"></svg></div>
+  <div class="stage"><svg id="plan-svg" viewBox="0 0 1100 460" role="img" aria-label="A grid of activations, picture tokens, question tokens, and answer tokens across, layers up, with the boxes and arcs for each step of the plan"></svg></div>
   <div class="controls">
     <button id="plan-prev" type="button">Back</button>
     <span id="plan-steps"></span>
@@ -385,172 +385,170 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
   });
 });
 
-/* Interactive plan. Tokens along the bottom, panels along the top. */
+/* Interactive plan, drawn like the patching primer: a grid of activations, tokens across and layers up.
+   Picture tokens (one per panel) come first, then the question, then each answer token as it is written. */
 (function () {
-  var NS = "http://www.w3.org/2000/svg";
-  var svg = document.getElementById("plan-svg");
+  var svg = document.getElementById("plan-svg"); if (!svg) return;
+  var F = "Open Sans, sans-serif", M = "JetBrains Mono, Menlo, monospace";
   var C = { bind: "#0072B2", relay: "#8C3B5A", gaze: "#009E73", prog: "#D55E00" };
+  var LIGHT = { bind: "#d3e5f2", relay: "#ecd3dd", gaze: "#cdeee3", prog: "#f8dccb" };
   var PANELS = [["heart", "E"], ["diamond", "M"], ["heart", "U"], ["diamond", "V"], ["heart", "P"], ["heart", "A"]];
-  var PX = 180, PW = 90, PY = 40;
-  var QUESTION = ["…each", "heart", "?", "Answer", ":"];
-  var OUT = ["E", ",", "U", ",", "P", ",", "A", "<end>"];
-  var TX = 30, TW = 64, TY = 330;
-  function tokX(i) { return TX + i * TW + TW / 2; }
-  function panX(i) { return PX + i * PW + PW / 2; }
-  var HEART = QUESTION.indexOf("heart"), COLON = QUESTION.indexOf(":"), Q = QUESTION.length;
-  function ans(k) { return Q + 2 * k; }       // token index of the k-th letter
-  function comma(k) { return Q + 2 * k + 1; } // token index of the comma after it
+  var TEXT = ["each", "heart", "?", "Answer", ":"], OUT = ["E", ",", "U", ",", "P", ",", "A", "end"];
+  var NP = PANELS.length, NQ = TEXT.length, NCOL = NP + NQ + OUT.length;
+  var X0 = 118, CWD = 51, CW = 45, ROWS = 6, CH = 22, G = 4, GBOT = 330;
+  var BANDS = ["1-6", "7-12", "13-18", "19-24", "25-30", "31-36"];
+  function colX(c) { return X0 + c * CWD; }
+  function colMid(c) { return colX(c) + CW / 2; }
+  function rowY(r) { return GBOT - (r + 1) * (CH + G); }      // row 0 = layers 1-6, at the bottom
+  var HEART = NP + 1, COLON = NP + NQ - 1;
+  function ans(k) { return NP + NQ + 2 * k; }
+  function comma(k) { return NP + NQ + 2 * k + 1; }
+  function el(tag, a, t) { return svgEl(tag, a, t); }
 
-  // Each step: shown output count, tinted panels, arrows, cursor position, text.
-  var STEPS = [
-    { name: "Task", out: 0, tint: [], arrows: [], cursor: null,
-      say: 'We show the VLM a strip of six panels and ask <i>"What is the letter inside each heart?"</i> The right answer is <span class="tok">E, U, P, A</span>, from left to right. Click <b>Next</b> to see how the VLM plans it. The bars on the right show where each step happens in the VLM\'s stack of 36 layers, from the bottom up.' },
-    { name: "1 Binding", out: 0, tint: [0, 2, 4, 5], arrows: [["t2p", HEART, 0, "bind"], ["t2p", HEART, 2, "bind"], ["t2p", HEART, 4, "bind"], ["t2p", HEART, 5, "bind"]], cursor: null,
-      say: '<b class="k" style="--kc:' + C.bind + '">Binding.</b> While the VLM is still reading the question, at the word <span class="tok">heart</span>, a small team of 16 attention heads, the <b>binding heads</b>, matches the word against the picture. They mark every panel that holds a heart. This happens about halfway up the VLM, in layers 15 to 21, before anything has been written.' },
-    { name: "2 Relay", out: 0, tint: [0, 2, 4, 5], arrows: [["t2t", HEART, COLON, "relay"]], cursor: null,
-      say: '<b class="k" style="--kc:' + C.relay + '">Relay.</b> The answer gets written a few tokens later, at the colon. Another team of 16 heads, the <b>relay heads</b>, reaches back to <span class="tok">heart</span> and carries the marked panels over to the colon.' },
-    { name: "3 Gaze", out: 1, tint: [0], arrows: [["t2p", COLON, 0, "gaze"]], cursor: null,
-      say: '<b class="k" style="--kc:' + C.gaze + '">Gaze.</b> At the colon, a team of 32 <b>gaze heads</b> follows the first mark back into the picture and reads what is inside that panel. The VLM writes <span class="tok">E</span>.' },
-    { name: "4 Progress", out: 2, tint: [0], arrows: [["t2p", ans(0), 0, "bind"]], cursor: 0,
-      say: '<b class="k" style="--kc:' + C.prog + '">Progress.</b> The VLM keeps no notes between words, so it works out its progress again at every step. At the written <span class="tok">E</span>, the binding heads link the letter back to the panel it came from. By layers 20 to 21, the comma holds a bookmark: <i>done up to panel 1</i>.' },
-    { name: "5 Select", out: 3, tint: [2], arrows: [["t2p", comma(0), 2, "gaze"]], cursor: 0,
-      say: '<b class="k" style="--kc:' + C.prog + '">Select.</b> At the comma, the VLM picks the nearest heart <i>after</i> the bookmark, panel 3. The gaze heads read it, and the VLM writes <span class="tok">U</span>.' },
-    { name: "6 Repeat", out: 5, tint: [4], arrows: [["t2p", ans(1), 2, "bind"], ["t2p", comma(1), 4, "gaze"]], cursor: 2,
-      say: 'The same two steps repeat. The binding heads link <span class="tok">U</span> to panel 3, the bookmark moves to <i>done up to panel 3</i>, and the VLM picks panel 5 and writes <span class="tok">P</span>.' },
-    { name: "Repeat", out: 7, tint: [5], arrows: [["t2p", ans(2), 4, "bind"], ["t2p", comma(2), 5, "gaze"]], cursor: 4,
-      say: 'Once more: <span class="tok">P</span> is linked to panel 5, the bookmark moves to panel 5, and the next heart is panel 6. The VLM writes <span class="tok">A</span>.' },
-    { name: "Stop", out: 8, tint: [], arrows: [["t2p", ans(3), 5, "bind"]], cursor: 5,
-      say: 'After <span class="tok">A</span>, the bookmark sits at panel 6, and no heart is left after it. The same step now tells the VLM to stop. Notice that the whole plan was rebuilt from the written letters at every step.' }
-  ];
-
-  function el(tag, attrs, text) {
-    var e = document.createElementNS(NS, tag);
-    for (var k in attrs) e.setAttribute(k, attrs[k]);
-    if (text != null) e.textContent = text;
-    return e;
-  }
-  // Arrowhead markers, one per color.
+  // arrowheads
   var defs = el("defs", {});
   Object.keys(C).forEach(function (k) {
-    var m = el("marker", { id: "ah-" + k, viewBox: "0 0 10 10", refX: "8", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" });
-    m.appendChild(el("path", { d: "M0,0 L10,5 L0,10 z", fill: C[k] }));
-    defs.appendChild(m);
+    var m = el("marker", { id: "pl-" + k, viewBox: "0 0 10 10", refX: 10, refY: 5, markerWidth: 9, markerHeight: 9, markerUnits: "userSpaceOnUse", orient: "auto" });
+    m.appendChild(el("path", { d: "M0,0 L10,5 L0,10 z", fill: C[k] })); defs.appendChild(m);
   });
   svg.appendChild(defs);
 
-  // Static layer: labels, panels, tokens.
-  svg.appendChild(el("text", { x: PX - 14, y: PY + 50, "text-anchor": "end", "font-size": "14", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, "image"));
-  svg.appendChild(el("text", { x: TX, y: TY - 34, "font-size": "14", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, "tokens, in the order the VLM reads and writes them →"));
+  // row labels and the grid
+  svg.appendChild(el("text", { x: 20, y: rowY(ROWS - 1) - 12, "font-size": 12, "font-weight": 700, fill: "#6b6b6b", "font-family": F }, "layers"));
+  BANDS.forEach(function (b, r) { svg.appendChild(el("text", { x: X0 - 10, y: rowY(r) + CH / 2, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11.5, fill: "#6b6b6b", "font-family": F }, b)); });
+  var cells = [], cols = [];
+  for (var c = 0; c < NCOL; c++) {
+    var g = el("g", {}); cells.push([]);
+    for (var r = 0; r < ROWS; r++) {
+      var rect = el("rect", { x: colX(c), y: rowY(r), width: CW, height: CH, rx: 4, fill: "#efefef", stroke: "#dadada", "stroke-width": 1 });
+      g.appendChild(rect); cells[c].push(rect);
+    }
+    svg.appendChild(g); cols.push(g);
+  }
+  // labels under the columns: panel pictures, then words
   var tints = [];
   PANELS.forEach(function (p, i) {
-    var r = el("rect", { x: PX + i * PW, y: PY, width: PW, height: PW, fill: "#FBEAF0", opacity: 0, "class": "fx" });
-    tints.push(r); svg.appendChild(r);
-    var g = el("g", { transform: "translate(" + (PX + i * PW + 5) + "," + (PY + 5) + ") scale(0.8)" });
-    g.innerHTML = shapeSVG(p[0], p[1]);
-    svg.appendChild(g);
-    svg.appendChild(el("text", { x: panX(i), y: PY + PW + 18, "text-anchor": "middle", "font-size": "12", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, "panel " + (i + 1)));
+    var x = colX(i), t = el("rect", { x: x, y: GBOT + 6, width: CW, height: CW, fill: "#fff", stroke: "#222", "stroke-width": 1.3 });
+    svg.appendChild(t); tints.push(t);
+    var s = el("g", { transform: "translate(" + (x + 2) + "," + (GBOT + 8) + ") scale(0.41)" }); s.innerHTML = shapeSVG(p[0], p[1]); svg.appendChild(s);
+    svg.appendChild(el("text", { x: colMid(i), y: GBOT + CW + 18, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 10.5, fill: "#6b6b6b", "font-family": F }, "panel " + (i + 1)));
   });
-  svg.appendChild(el("rect", { x: PX, y: PY, width: PW * 6, height: PW, fill: "none", stroke: "#222", "stroke-width": "1.5" }));
-  for (var i = 1; i < 6; i++) svg.appendChild(el("line", { x1: PX + i * PW, y1: PY, x2: PX + i * PW, y2: PY + PW, stroke: "#222", "stroke-width": "1.5" }));
-
-  var toks = [];
-  QUESTION.concat(OUT).forEach(function (t, i) {
-    var isOut = i >= Q;
-    var g = el("g", { "class": "fx" });
-    g.appendChild(el("rect", { x: TX + i * TW + 3, y: TY - 18, width: TW - 6, height: 34, rx: 5, fill: isOut ? "#F6D5DF" : "#f4f4f4", stroke: isOut ? "#8C3B5A" : "#ccc" }));
-    g.appendChild(el("text", { x: tokX(i), y: TY + 4, "text-anchor": "middle", "font-size": t.length > 4 ? "12" : "15", "font-family": "JetBrains Mono, Menlo, monospace", fill: isOut ? "#3A1D2A" : "#333" }, t));
-    toks.push(g); svg.appendChild(g);
+  svg.appendChild(el("text", { x: (colX(0) + colX(NP - 1) + CW) / 2, y: GBOT + CW + 36, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "picture tokens"));
+  var labels = [];
+  TEXT.concat(OUT).forEach(function (t, i) {
+    var c = NP + i, out = i >= NQ;
+    var g = el("g", {});
+    g.appendChild(el("rect", { x: colX(c), y: GBOT + 10, width: CW, height: 26, rx: 5, fill: out ? "#F6D5DF" : "#f4f4f4", stroke: out ? "#8C3B5A" : "#ccc" }));
+    g.appendChild(el("text", { x: colMid(c), y: GBOT + 23, "text-anchor": "middle", "dominant-baseline": "central", "font-size": t.length > 4 ? 10.5 : 13, fill: out ? "#3A1D2A" : "#333", "font-family": M }, t));
+    svg.appendChild(g); labels.push(g);
   });
+  svg.appendChild(el("text", { x: (colX(NP) + colX(NP + NQ - 1) + CW) / 2, y: GBOT + CW + 36, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "question"));
+  svg.appendChild(el("text", { x: (colX(NP + NQ) + colX(NCOL - 1) + CW) / 2, y: GBOT + CW + 36, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "answer, one token at a time"));
 
-  // Cursor marker.
-  var cur = el("g", { "class": "fx", opacity: 0 });
-  var curLine = el("line", { y1: PY - 14, y2: PY + PW + 4, stroke: C.prog, "stroke-width": "3", "stroke-dasharray": "6 4" });
-  var curText = el("text", { y: PY - 20, "text-anchor": "middle", "font-size": "13", "font-weight": "700", fill: C.prog, "font-family": "Open Sans, sans-serif" }, "done up to here");
-  cur.appendChild(curLine); cur.appendChild(curText); svg.appendChild(cur);
+  // bookmark: "done up to here", drawn on the picture columns
+  var mark = el("g", { opacity: 0 });
+  var markLine = el("line", { y1: rowY(ROWS - 1) - 2, y2: GBOT + CW + 48, stroke: C.prog, "stroke-width": 3, "stroke-dasharray": "6 4" });
+  var markText = el("text", { y: GBOT + CW + 62, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: C.prog, "font-family": F }, "done up to here");
+  mark.appendChild(markLine); mark.appendChild(markText); svg.appendChild(mark);
+  var arcLayer = el("g", {}); svg.appendChild(arcLayer);
+  var mv = makeMover(svg, "pl-glow"); mv.front();
 
-  var arrowLayer = el("g", {}); svg.appendChild(arrowLayer);
+  // each step: answer tokens shown, tinted panels, lit cells [col, rows, kind], arcs [from col, to col, kind], bookmark
+  var STEPS = [
+    { name: "Task", out: 0, tint: [], lit: [], arcs: [], mark: null },
+    { name: "1 Binding", out: 0, tint: [0, 2, 4, 5], lit: [[HEART, [2, 3], "bind"]], arcs: [[HEART, 0, "bind"], [HEART, 2, "bind"], [HEART, 4, "bind"], [HEART, 5, "bind"]], mark: null },
+    { name: "2 Relay", out: 0, tint: [0, 2, 4, 5], lit: [[COLON, [3], "relay"]], arcs: [[COLON, HEART, "relay"]], mark: null },
+    { name: "3 Gaze", out: 1, tint: [0], lit: [[COLON, [3, 4, 5], "gaze"]], arcs: [[COLON, 0, "gaze"]], mark: null },
+    { name: "4 Progress", out: 2, tint: [0], lit: [[ans(0), [2, 3], "bind"], [comma(0), [3], "prog"]], arcs: [[ans(0), 0, "bind"]], mark: 0 },
+    { name: "5 Select", out: 3, tint: [2], lit: [[comma(0), [3, 4], "prog"]], arcs: [[comma(0), 2, "gaze"]], mark: 0 },
+    { name: "6 Repeat", out: 5, tint: [4], lit: [[ans(1), [2, 3], "bind"], [comma(1), [3, 4], "prog"]], arcs: [[ans(1), 2, "bind"], [comma(1), 4, "gaze"]], mark: 2 },
+    { name: "", out: 7, tint: [5], lit: [[ans(2), [2, 3], "bind"], [comma(2), [3, 4], "prog"]], arcs: [[ans(2), 4, "bind"], [comma(2), 5, "gaze"]], mark: 4 },
+    { name: "", out: 8, tint: [], lit: [[ans(3), [2, 3], "bind"], [ans(3), [3, 4], "prog"]], arcs: [[ans(3), 5, "bind"]], mark: 5 }
+  ];
+  var SAY = [
+    'We show the VLM a strip of six panels and ask <i>"What is the letter inside each heart?"</i> The right answer is <span class="tok">E, U, P, A</span>. Each box is one activation: one token at one band of layers, with layer 1 at the bottom. Each picture token stands for one panel. Click <b>Next</b> to see the plan.',
+    '<b class="k" style="--kc:' + C.bind + '">Binding.</b> While the VLM is still reading the question, at the word <span class="tok">heart</span>, 16 <b>binding heads</b> in layers 15 to 21 match the word against the picture tokens. They mark every panel that holds a heart. Nothing has been written yet.',
+    '<b class="k" style="--kc:' + C.relay + '">Relay.</b> The answer gets written a few tokens later, at the colon. 16 <b>relay heads</b> at the colon, in layers 19 to 23, reach back to <span class="tok">heart</span> and carry the marked panels over.',
+    '<b class="k" style="--kc:' + C.gaze + '">Gaze.</b> At the colon, 32 <b>gaze heads</b> in layers 19 to 34 follow the first mark back to the picture tokens and read what is in panel 1. The VLM writes <span class="tok">E</span>, and a new token is added to the end.',
+    '<b class="k" style="--kc:' + C.prog + '">Progress.</b> The VLM keeps no notes between words, so it works out its progress again from what it has written. At the written <span class="tok">E</span>, the binding heads link the letter back to panel 1. At layers 20 to 21, the comma after it holds a bookmark: <i>done up to panel 1</i>.',
+    '<b class="k" style="--kc:' + C.prog + '">Select.</b> At the comma, in layers 20 to 25, the VLM picks the nearest heart <i>after</i> the bookmark: panel 3. The gaze heads read it, and the VLM writes <span class="tok">U</span>.',
+    'The same two steps repeat. The binding heads link <span class="tok">U</span> to panel 3, the bookmark moves to <i>done up to panel 3</i>, and the VLM picks panel 5 and writes <span class="tok">P</span>.',
+    'Once more: <span class="tok">P</span> is linked to panel 5, the bookmark moves to panel 5, and the next heart is panel 6. The VLM writes <span class="tok">A</span>.',
+    'After <span class="tok">A</span>, the bookmark sits at panel 6, and no heart is left after it. The same step now tells the VLM to stop. The whole plan was rebuilt from the written letters at every step.'
+  ];
 
-  // Layer ruler: one column per group of heads, layer 0 at the bottom and 35 at the top.
-  var BANDS = [[], [["bind", 15, 21]], [["relay", 19, 23]], [["gaze", 19, 34]],
-    [["bind", 15, 21], ["prog", 20, 21]], [["prog", 20, 25], ["gaze", 19, 34]],
-    [["bind", 15, 21], ["prog", 20, 25], ["gaze", 19, 34]], [["bind", 15, 21], ["prog", 20, 25], ["gaze", 19, 34]],
-    [["bind", 15, 21], ["prog", 20, 25]]];
-  var COLS = { bind: 0, relay: 1, gaze: 2, prog: 3 }, LX = 920, LCW = 16, LCG = 6, LY = 40, LS = 9.6;
-  function ly(l) { return LY + (35 - l) * LS; }  // top edge of layer l
-  function lx(k) { return LX + COLS[k] * (LCW + LCG); }
-  svg.appendChild(el("text", { x: LX + 2 * (LCW + LCG) - LCG / 2, y: LY - 12, "text-anchor": "middle", "font-size": "13", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, "layers"));
-  Object.keys(COLS).forEach(function (k) {
-    svg.appendChild(el("rect", { x: lx(k), y: ly(35), width: LCW, height: 36 * LS, fill: "#f4f4f4", stroke: "#ddd" }));
-  });
-  [0, 10, 20, 30, 35].forEach(function (l) {
-    svg.appendChild(el("text", { x: LX - 6, y: ly(l) + LS / 2 + 4, "text-anchor": "end", "font-size": "11", fill: "#6b6b6b", "font-family": "Open Sans, sans-serif" }, l));
-  });
-  var bandLayer = el("g", {}); svg.appendChild(bandLayer);
-  function band(b, active, labelY) {
-    var g = el("g", { opacity: active ? 1 : 0.22 });
-    g.appendChild(el("rect", { x: lx(b[0]), y: ly(b[2]), width: LCW, height: (b[2] - b[1] + 1) * LS, fill: C[b[0]] }));
-    if (active) g.appendChild(el("text", { x: LX + 4 * (LCW + LCG), y: labelY, "font-size": "12", "font-weight": "700", fill: C[b[0]], "font-family": "Open Sans, sans-serif", "dominant-baseline": "hanging" }, b[1] + "-" + b[2]));
-    return g;
+  function arcPath(from, to) {
+    var x0 = colMid(from), x1 = colMid(to), top = rowY(ROWS - 1) - 4, h = 22 + Math.abs(x0 - x1) * 0.16;
+    return "M" + (x0 - 2) + "," + top + " Q" + (x0 + x1) / 2 + "," + (top - h) + " " + (x1 + 2) + "," + top;
   }
-
-  function arrow(a) {
-    var kind = a[3], c = C[kind], d;
-    if (a[0] === "t2p") {
-      var x1 = tokX(a[1]), y1 = TY - 20, x2 = panX(a[2]), y2 = PY + PW + 24;
-      d = "M" + x1 + "," + y1 + " C" + x1 + "," + (y1 - 70) + " " + x2 + "," + (y2 + 70) + " " + x2 + "," + y2;
-    } else {
-      var xa = tokX(a[1]), xb = tokX(a[2]), y = TY + 20;
-      d = "M" + xa + "," + y + " C" + xa + "," + (y + 50) + " " + xb + "," + (y + 50) + " " + xb + "," + (y + 2);
+  function paintBase(n) {
+    var shown = NP + NQ + STEPS[n].out;
+    for (var c = 0; c < NCOL; c++) {
+      cols[c].setAttribute("opacity", c < shown ? 1 : 0);
+      cells[c].forEach(function (rc) { rc.setAttribute("fill", "#efefef"); rc.setAttribute("stroke", "#dadada"); rc.setAttribute("stroke-width", 1); });
     }
-    return el("path", { d: d, fill: "none", stroke: c, "stroke-width": "3", "marker-end": "url(#ah-" + kind + ")", opacity: 0.9 });
+    labels.forEach(function (g, i) { g.setAttribute("opacity", NP + i < shown ? 1 : 0.12); });
   }
-
+  function light(lit, strong) {
+    lit.forEach(function (l) { l[1].forEach(function (r) {
+      var rc = cells[l[0]][r];
+      rc.setAttribute("fill", strong ? C[l[2]] : LIGHT[l[2]]); rc.setAttribute("stroke", C[l[2]]); rc.setAttribute("stroke-width", strong ? 1.5 : 1);
+    }); });
+  }
   var stepsBox = document.getElementById("plan-steps"), say = document.getElementById("plan-say");
   var prev = document.getElementById("plan-prev"), next = document.getElementById("plan-next");
-  var REPEAT = 6;                                  // the last three frames play as one step
+  var REPEAT = 6, at = 0, timer = null;
   var btns = STEPS.slice(0, REPEAT + 1).map(function (s, i) {
     var b = document.createElement("button");
     b.type = "button"; b.className = "step"; b.textContent = s.name;
     b.addEventListener("click", function () { go(i); });
     stepsBox.appendChild(b); return b;
   });
-  var at = 0, timer = null;
   function go(n) {
     clearTimeout(timer);
     n = Math.max(0, Math.min(REPEAT, n));
     show(n);
     if (n === REPEAT) (function tick() {
-      timer = setTimeout(function () { if (at < STEPS.length - 1) { show(at + 1); tick(); } }, 2200);
+      timer = setTimeout(function () { if (at < STEPS.length - 1) { show(at + 1); tick(); } }, 3000);
     })();
   }
   function show(n) {
-    at = n;
-    var s = STEPS[at];
-    tints.forEach(function (r, i) { r.setAttribute("opacity", s.tint.indexOf(i) >= 0 ? 1 : 0); });
-    toks.forEach(function (g, i) { g.setAttribute("opacity", i < Q + s.out ? 1 : 0.12); });
-    if (s.cursor == null) cur.setAttribute("opacity", 0);
-    else {
-      var x = PX + (s.cursor + 1) * PW;
-      curLine.setAttribute("x1", x); curLine.setAttribute("x2", x); curText.setAttribute("x", Math.min(x, PX + 6 * PW - 40));
-      cur.setAttribute("opacity", 1);
+    var prevOut = at === n - 1 ? STEPS[at].out : STEPS[n].out;
+    at = n; mv.clear();
+    var s = STEPS[n];
+    paintBase(n);
+    while (arcLayer.firstChild) arcLayer.removeChild(arcLayer.firstChild);
+    for (var j = 0; j < n; j++) {                                   // earlier steps stay, lighter
+      light(STEPS[j].lit, false);
+      STEPS[j].arcs.forEach(function (a) { arcLayer.appendChild(el("path", { d: arcPath(a[0], a[1]), fill: "none", stroke: C[a[2]], "stroke-width": 2, opacity: 0.2 })); });
     }
-    while (arrowLayer.firstChild) arrowLayer.removeChild(arrowLayer.firstChild);
-    while (bandLayer.firstChild) bandLayer.removeChild(bandLayer.firstChild);
-    for (var j = 0; j < at; j++) {                 // earlier steps stay, lighter
-      STEPS[j].arrows.forEach(function (a) { var p = arrow(a); p.setAttribute("opacity", 0.2); arrowLayer.appendChild(p); });
-      BANDS[j].forEach(function (b) { bandLayer.appendChild(band(b, false)); });
-    }
-    s.arrows.forEach(function (a) { arrowLayer.appendChild(arrow(a)); });
-    var lastY = -1e9;                              // stack labels so they never overlap
-    BANDS[at].slice().sort(function (a, b) { return b[2] - a[2]; }).forEach(function (b) {
-      var y = Math.max(ly(b[2]), lastY + 15); lastY = y;
-      bandLayer.appendChild(band(b, true, y));
+    light(s.lit, true);
+    var arcs = s.arcs.map(function (a) {
+      var p = el("path", { d: arcPath(a[0], a[1]), fill: "none", stroke: C[a[2]], "stroke-width": 2.5, "marker-end": "url(#pl-" + a[2] + ")" });
+      arcLayer.appendChild(p); return [p, a[2]];
     });
-    say.innerHTML = s.say;
-    var active = Math.min(at, REPEAT);
+    tints.forEach(function (t, i) { t.setAttribute("fill", s.tint.indexOf(i) >= 0 ? "#FBEAF0" : "#fff"); });
+    if (s.mark == null) mark.setAttribute("opacity", 0);
+    else {
+      var x = colX(s.mark) + CW + (CWD - CW) / 2;
+      markLine.setAttribute("x1", x); markLine.setAttribute("x2", x); markText.setAttribute("x", Math.max(x, 70));
+      mark.setAttribute("opacity", 1);
+    }
+    say.innerHTML = SAY[n];
+    var active = Math.min(n, REPEAT);
     btns.forEach(function (b, i) { if (i === active) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
-    prev.disabled = at === 0;
-    next.disabled = at >= REPEAT;
+    prev.disabled = n === 0; next.disabled = n >= REPEAT;
+    if (mv.reduce) return;
+    // information flows along each arc, from the token read into the token reading
+    arcs.forEach(function (a, i) { mv.along(a[0], C[a[1]], 150 + i * 120, 1100, 5, true); });
+    // a newly written token fills in from layer 1 up, like the patching runs
+    for (var c = NP + NQ + prevOut; c < NP + NQ + s.out; c++) (function (c, k) {
+      cells[c].forEach(function (rc, r) {
+        var final = rc.getAttribute("fill"); rc.setAttribute("fill", "#ffffff");
+        mv.at(1300 + k * 600 + r * 80, function () { rc.setAttribute("fill", final); });
+      });
+    })(c, c - (NP + NQ + prevOut));
+    mv.run();
   }
   function back() { go(Math.min(at, REPEAT) - 1); }
   function fwd() { if (at < REPEAT) go(at + 1); }
@@ -562,8 +560,6 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
   });
   show(0);
 })();
-
-
 
 /* Primer animations. Each one is a list of frames; Back, Next, and Play step through them. */
 function makeStepper(root, frames, draw, interval) {
