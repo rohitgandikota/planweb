@@ -164,7 +164,7 @@ We opened up one of these models and traced how it does this. We found that the 
 <div class="stage"><svg id="block-svg" viewBox="0 0 900 362" role="img" aria-label="The simplest transformer block: a residual stream line with an attention step and an MLP step that each read from the line and add back to it"></svg></div>
 <p style="margin-top: 0.8rem">This is the simplest <b>transformer block</b>. It does two things, in order. <b>Attention</b> reads the stream, pulls in information from <i>other</i> tokens, and adds it back. Then the <b>MLP</b> reads the stream and works on <i>this</i> token alone, and adds its result back too. A model is just many of these blocks stacked on top of each other. Ours has 36, which we call its <b>layers</b>.</p>
 <p>Here is a whole sentence going through two blocks. We follow the last token.</p>
-<div class="stage"><svg id="tf-svg" viewBox="0 0 900 630" role="img" aria-label="A sentence of five tokens; the last token goes through two transformer blocks, each with attention and an MLP added to its residual stream"></svg></div>
+<div class="stage"><svg id="tf-svg" viewBox="0 0 900 668" role="img" aria-label="A sentence of five tokens; the last token goes through two transformer blocks, each with attention and an MLP added to its residual stream"></svg></div>
 <div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
 <div class="say" aria-live="polite"></div>
 </div>
@@ -681,7 +681,7 @@ function blkPart(svg, id, X, cx, yBranch, name, color, key) {
   var g = svgEl("g", {});
   var inP = svgEl("path", { d: "M" + X + "," + yBranch + " H" + cx + " V" + bottom, fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + id + "-" + key + ")" });
   var box = svgEl("rect", { x: cx - BLK.boxW / 2, y: top, width: BLK.boxW, height: BLK.boxH, rx: 7, fill: color, "class": "mlp-box" });
-  var label = svgEl("text", { x: cx, y: top + BLK.boxH / 2 + 5, "text-anchor": "middle", "font-size": 15, "font-weight": 700, fill: "#fff", "font-family": PF }, name);
+  var label = svgEl("text", { x: cx, y: top + BLK.boxH / 2, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 15, "font-weight": 700, fill: "#fff", "font-family": PF }, name);
   var outP = svgEl("path", { d: "M" + cx + "," + top + " V" + yPlus + " H" + (X - BLK.r - 1), fill: "none", stroke: color, "stroke-width": 2.2, "marker-end": "url(#" + id + "-" + key + ")" });
   var dot = svgEl("circle", { cx: X, cy: yBranch, r: 4, fill: P_ROSE });
   var plus = svgEl("g", {});
@@ -696,9 +696,10 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
   var att = blkPart(svg, id, X, cx, yBranch, "Attention", P_BLUE, "b");
   var mlp = blkPart(svg, id, X, cx, att.yPlus - BLK.partGap, "MLP", P_GREEN, "g");
   var T = mlp.yPlus - BLK.r - 14, B = yBranch + 14;
-  var frame = svgEl("rect", { x: cx - BLK.boxW / 2 - 24, y: T, width: (X + 28) - (cx - BLK.boxW / 2 - 24), height: B - T, rx: 10, fill: "none", stroke: P_ROSE, "stroke-width": 1.6 });
+  var FL = cx - BLK.boxW / 2 - 28, FR = X + 56;
+  var frame = svgEl("rect", { x: FL, y: T, width: FR - FL, height: B - T, rx: 10, fill: "#fffafc", stroke: P_ROSE, "stroke-width": 1.6 });
   svg.insertBefore(frame, svg.firstChild.nextSibling);
-  svg.appendChild(svgEl("text", { x: cx - BLK.boxW / 2 - 12, y: T + 18, "font-size": 13, "font-weight": 700, fill: P_ROSE, "font-family": PF }, name));
+  svg.appendChild(svgEl("text", { x: FL + 12, y: T + 18, "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: P_ROSE, "font-family": PF }, name));
   return { att: att, mlp: mlp, top: T, bottom: B };
 }
 
@@ -711,14 +712,14 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
   svg.appendChild(stream);
   var b = blkBlock(svg, "b1", X, CX, Y0, "one transformer block");
   svg.appendChild(svgEl("rect", { x: X - 40, y: 328, width: 80, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
-  svg.appendChild(svgEl("text", { x: X, y: 347, "text-anchor": "middle", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "cat"));
-  svg.appendChild(svgEl("text", { x: X + 50, y: 347, "font-size": 13, fill: P_ROSE, "font-family": PF }, "residual stream"));
-  svg.appendChild(svgEl("text", { x: X + 14, y: 22, "font-size": 13, fill: P_ROSE, "font-family": PF }, "to the next block"));
-  svg.appendChild(svgEl("text", { x: X + 40, y: b.att.yPlus + 5, "font-size": 13, fill: P_BLUE, "font-family": PF }, "add what attention found"));
-  svg.appendChild(svgEl("text", { x: X + 40, y: b.mlp.yPlus + 5, "font-size": 13, fill: P_GREEN, "font-family": PF }, "add the MLP's result"));
+  svg.appendChild(svgEl("text", { x: X, y: 342, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "cat"));
+  svg.appendChild(svgEl("text", { x: X + 52, y: 342, "dominant-baseline": "central", "font-size": 13, fill: P_ROSE, "font-family": PF }, "residual stream"));
+  svg.appendChild(svgEl("text", { x: X + 14, y: 26, "dominant-baseline": "central", "font-size": 13, fill: P_ROSE, "font-family": PF }, "to the next block"));
+  svg.appendChild(svgEl("text", { x: X + 68, y: b.att.yPlus, "dominant-baseline": "central", "font-size": 13, fill: P_BLUE, "font-family": PF }, "add what attention found"));
+  svg.appendChild(svgEl("text", { x: X + 68, y: b.mlp.yPlus, "dominant-baseline": "central", "font-size": 13, fill: P_GREEN, "font-family": PF }, "add the MLP's result"));
   svg.appendChild(svgEl("path", { d: "M120," + b.att.mid + " H" + (b.att.left - 1), fill: "none", stroke: P_BLUE, "stroke-width": 2, "stroke-dasharray": "5 4", "marker-end": "url(#b1-b)" }));
-  svg.appendChild(svgEl("text", { x: 120, y: b.att.mid - 9, "font-size": 13, fill: P_BLUE, "font-family": PF }, "other tokens"));
-  svg.appendChild(svgEl("text", { x: b.mlp.left - 14, y: b.mlp.mid + 5, "text-anchor": "end", "font-size": 13, fill: P_GREEN, "font-family": PF }, "this token only"));
+  svg.appendChild(svgEl("text", { x: 120, y: b.att.mid - 12, "dominant-baseline": "central", "font-size": 13, fill: P_BLUE, "font-family": PF }, "other tokens"));
+  svg.appendChild(svgEl("text", { x: b.mlp.left - 40, y: b.mlp.mid, "text-anchor": "end", "dominant-baseline": "central", "font-size": 13, fill: P_GREEN, "font-family": PF }, "this token only"));
 })();
 
 /* Primer 1b: a sentence through two blocks, drawn for the last token only. Earlier tokens keep faint streams.
@@ -730,22 +731,22 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
   var defs = svgEl("defs", {}), f = svgEl("filter", { id: "tf-glow", x: "-100%", y: "-100%", width: "300%", height: "300%" });
   f.innerHTML = '<feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>';
   defs.appendChild(f); svg.appendChild(defs);
-  var PREV = ["The", "cat", "sat", "on"], X = 730, CX = 590, TOKY = 594;
+  var PREV = ["The", "cat", "sat", "on"], X = 730, CX = 590, TOKY = 630;
   function px(i) { return 80 + i * 100; }
   PREV.forEach(function (t, i) {
-    svg.appendChild(svgEl("line", { x1: px(i), y1: TOKY, x2: px(i), y2: 76, stroke: P_ROSE, "stroke-width": 3, opacity: 0.3 }));
+    svg.appendChild(svgEl("line", { x1: px(i), y1: TOKY, x2: px(i), y2: 92, stroke: P_ROSE, "stroke-width": 3, opacity: 0.3 }));
     svg.appendChild(svgEl("rect", { x: px(i) - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
-    svg.appendChild(svgEl("text", { x: px(i), y: TOKY + 19, "text-anchor": "middle", "font-size": 14, fill: "#333", "font-family": PM }, t));
+    svg.appendChild(svgEl("text", { x: px(i), y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#333", "font-family": PM }, t));
   });
-  svg.appendChild(svgEl("line", { x1: X, y1: TOKY, x2: X, y2: 62, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#b2-r)" }));
+  svg.appendChild(svgEl("line", { x1: X, y1: TOKY, x2: X, y2: 50, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#b2-r)" }));
   svg.appendChild(svgEl("rect", { x: X - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
-  svg.appendChild(svgEl("text", { x: X, y: TOKY + 19, "text-anchor": "middle", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "the"));
-  var b1 = blkBlock(svg, "b2", X, CX, 566, "block 1");
-  var b2 = blkBlock(svg, "b2", X, CX, b1.top - 28, "block 2");
+  svg.appendChild(svgEl("text", { x: X, y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "the"));
+  var b1 = blkBlock(svg, "b2", X, CX, 604, "block 1");
+  var b2 = blkBlock(svg, "b2", X, CX, b1.top - 40, "block 2");
   [b1, b2].forEach(function (b) {                     // the last token looks back at each earlier stream
     var arrows = svgEl("g", { opacity: 0 }), paths = [], y = b.att.mid;
     PREV.forEach(function (t, i) {
-      var x0 = b.att.left - 2, x1 = px(i) + 5, h = 18 + (PREV.length - i) * 10;
+      var x0 = b.att.left - 2, x1 = px(i) + 3, h = 18 + (PREV.length - i) * 10;
       var p = svgEl("path", { d: "M" + x0 + "," + y + " Q" + (x0 + x1) / 2 + "," + (y - h) + " " + x1 + "," + y, fill: "none", stroke: P_BLUE, "stroke-width": 2, "marker-end": "url(#b2-b)" });
       arrows.appendChild(p); paths.push(p);
     });
@@ -754,8 +755,8 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
   });
   var PARTS = [b1.att, b1.mlp, b2.att, b2.mlp];
   var out = svgEl("g", { opacity: 0 });
-  out.appendChild(svgEl("rect", { x: X - 78, y: 12, width: 156, height: 34, rx: 17, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 }));
-  out.appendChild(svgEl("text", { x: X, y: 34, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, "next word: mat"));
+  out.appendChild(svgEl("rect", { x: X - 78, y: 14, width: 156, height: 34, rx: 17, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 }));
+  out.appendChild(svgEl("text", { x: X, y: 31, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, "next word: mat"));
   svg.appendChild(out);
   var ballLayer = svgEl("g", {}); svg.appendChild(ballLayer);
 
