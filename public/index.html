@@ -711,7 +711,7 @@ var P_ROSE = "#8C3B5A", P_BLUE = "#0072B2", P_GREEN = "#009E73", P_GRAY = "#6b6b
     svg.appendChild(svgEl("rect", { x: px(i) - 34, y: 478, width: 68, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
     svg.appendChild(svgEl("text", { x: px(i), y: 497, "text-anchor": "middle", "font-size": 14, fill: "#333", "font-family": PM }, t));
   });
-  // the last token's stream: a rose base line, plus one stripe per addition
+  // the last token's stream
   svg.appendChild(svgEl("line", { x1: X, y1: 476, x2: X, y2: TOP, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#tf-r)" }));
   svg.appendChild(svgEl("rect", { x: X - 34, y: 478, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
   svg.appendChild(svgEl("text", { x: X, y: 497, "text-anchor": "middle", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, LASTTOK));
