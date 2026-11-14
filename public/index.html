@@ -81,7 +81,7 @@ details.primer[open] > summary::before { content: "\2212"; }
 details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline-offset: 2px; }
 .primer-body { padding: 0 1rem 1rem; }
 .primer-body .stage { background: #fff; border: 1px solid #eee; border-radius: 6px; overflow-x: auto; }
-.primer-body svg { display: block; width: 100%; min-width: 520px; height: auto; }
+.primer-body .stage svg { display: block; width: 100%; min-width: 520px; height: auto; }
 .primer-body .controls { display: flex; justify-content: center; gap: 8px; margin: 10px 0 4px; }
 .primer-body .controls button { font: 600 14px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); background: #fff; color: var(--rose-dark); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
 .primer-body .controls button:disabled { opacity: 0.35; cursor: default; }
@@ -234,7 +234,7 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <summary>Primer: what is activation patching?</summary>
 <div class="primer-body">
 <p>Activation patching is how we test what a piece of the VLM's work contains. Click through to see one patch.</p>
-<div class="stage"><svg id="pp-svg" viewBox="0 0 900 420" role="img" aria-label="Two runs of the VLM; a state saved from the source run is pasted into the target run at the same layer, and the target's answer changes"></svg></div>
+<div class="stage"><svg id="pp-svg" viewBox="0 0 900 400" role="img" aria-label="Two runs of the VLM; a state saved from the source run is pasted into the target run at the same layer, and the target's answer changes"></svg></div>
 <div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
 <div class="say" aria-live="polite"></div>
 <p style="margin-top: 1rem"><b>Why the letters tell us so much.</b> We build every pair so that each kind of information the pasted state could carry leads to a different letter.</p>
@@ -1252,73 +1252,110 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
   }, 4400);
 })();
 
-/* Primer 3: activation patching. Two runs; save a state from the source, paste it into the target at the same layer. */
+/* Primer 3: activation patching. Each run is a grid of activations, tokens across and layers up.
+   Source in blue, target in maroon. One source activation replaces the target's at the same spot, and everything
+   computed after it in the target turns orange. */
 (function () {
   var svg = document.getElementById("pp-svg"); if (!svg) return;
-  blkMarkers(svg, "pp");
+  var C = { src: ["#cfe3f2", "#0072B2"], tgt: ["#f6d5df", "#8C3B5A"], chg: ["#f8d6c2", "#D55E00"], none: ["#f3f3f3", "#dcdcdc"] };
+  var COLS = 4, ROWS = 6, CW = 64, CH = 26, G = 5, BOT = 344, PC = 1, PR = 2;   // paste at the shape word, third layer drawn
   var mv = makeMover(svg, "pp-glow");
-  var SX = 240, TX = 660, BOT = 340, TOPY = 86, NL = 6, LH = (BOT - TOPY) / NL, PASTE = 3;
-  function ly(l) { return BOT - (l + 0.5) * LH; }        // middle of layer l, layer 0 at the bottom
-  function run(cx, title, strip, q, ans) {
-    var g = {};
-    svg.appendChild(svgEl("text", { x: cx, y: 18, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 15, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, title));
-    for (var l = 0; l < NL; l++) {
-      svg.appendChild(svgEl("rect", { x: cx - 70, y: BOT - (l + 1) * LH + 3, width: 140, height: LH - 6, rx: 6, fill: "#fffafc", stroke: "#e6d0d8" }));
-    }
-    svg.appendChild(svgEl("text", { x: cx - 82, y: ly(0), "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: P_GRAY, "font-family": PF }, "layer 1"));
-    svg.appendChild(svgEl("text", { x: cx - 82, y: ly(NL - 1), "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: P_GRAY, "font-family": PF }, "layer 36"));
-    g.stream = svgEl("line", { x1: cx, y1: BOT + 12, x2: cx, y2: 64, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#pp-r)" });
-    svg.appendChild(g.stream);
-    g.upper = svgEl("line", { x1: cx, y1: ly(PASTE), x2: cx, y2: 64, stroke: "#D55E00", "stroke-width": 4, opacity: 0 });
-    svg.appendChild(g.upper);
+  function cellX(x0, c) { return x0 + c * (CW + G); }
+  function cellY(r) { return BOT - (r + 1) * (CH + G); }   // row 0 at the bottom
+  function grid(x0, title, strip, toks) {
+    var g = { x0: x0, cells: [] };
+    var mid = x0 + (COLS * (CW + G) - G) / 2;
+    svg.appendChild(svgEl("text", { x: mid, y: 20, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 15, "font-weight": 700, fill: title[1], "font-family": PF }, title[0]));
     strip.forEach(function (p, i) {
-      var x = cx - 2 * 30 + i * 30;
-      svg.appendChild(svgEl("rect", { x: x, y: BOT + 14, width: 30, height: 30, fill: "#fff", stroke: "#222", "stroke-width": 1.2 }));
-      var s = svgEl("g", { transform: "translate(" + (x + 2) + "," + (BOT + 16) + ") scale(0.26)" }); s.innerHTML = shapeSVG(p[0], p[1]); svg.appendChild(s);
+      var sx = mid - 2 * 28 + i * 28;
+      svg.appendChild(svgEl("rect", { x: sx, y: 36, width: 28, height: 28, fill: "#fff", stroke: "#222", "stroke-width": 1.2 }));
+      var s = svgEl("g", { transform: "translate(" + (sx + 2) + ",38) scale(0.24)" }); s.innerHTML = shapeSVG(p[0], p[1]); svg.appendChild(s);
     });
-    svg.appendChild(svgEl("text", { x: cx, y: BOT + 62, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, fill: "#333", "font-family": PM }, q));
-    g.bubble = svgEl("circle", { cx: cx, cy: 44, r: 18, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 });
-    g.letter = svgEl("text", { x: cx, y: 44, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 18, "font-weight": 700, fill: "#3A1D2A", "font-family": PF }, ans);
+    for (var c = 0; c < COLS; c++) {
+      g.cells.push([]);
+      for (var r = 0; r < ROWS; r++) {
+        var rect = svgEl("rect", { x: cellX(x0, c), y: cellY(r), width: CW, height: CH, rx: 4, fill: C.none[0], stroke: C.none[1], "stroke-width": 1.2 });
+        svg.appendChild(rect); g.cells[c].push(rect);
+      }
+      svg.appendChild(svgEl("text", { x: cellX(x0, c) + CW / 2, y: BOT + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12.5, fill: "#333", "font-family": PM }, toks[c]));
+    }
+    var ax = cellX(x0, COLS - 1) + CW / 2;
+    svg.appendChild(svgEl("line", { x1: ax, y1: cellY(ROWS - 1) - 4, x2: ax, y2: 112, stroke: "#bbb", "stroke-width": 1.5 }));
+    g.bubble = svgEl("circle", { cx: ax, cy: 94, r: 17, fill: "#fff", stroke: "#ccc", "stroke-width": 1.5 });
+    g.letter = svgEl("text", { x: ax, y: 94, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 17, "font-weight": 700, fill: "#333", "font-family": PF }, "");
     svg.appendChild(g.bubble); svg.appendChild(g.letter);
-    g.ring = svgEl("circle", { cx: cx, cy: ly(PASTE), r: 13, fill: "#fff", stroke: "#D55E00", "stroke-width": 3, opacity: 0 });
-    svg.appendChild(g.ring);
     return g;
   }
-  var S = run(SX, "Source run", [["star", "G"], ["circle", "C"], ["plus", "Z"], ["heart", "D"]], "...the heart? Answer:", "D");
-  var T = run(TX, "Target run", [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]], "...the star? Answer:", "T");
-  var copyPath = svgEl("path", { d: "M" + (SX + 14) + "," + ly(PASTE) + " Q" + (SX + TX) / 2 + "," + (ly(PASTE) - 90) + " " + (TX - 14) + "," + ly(PASTE), fill: "none", stroke: "#D55E00", "stroke-width": 2.5, "stroke-dasharray": "6 5", "marker-end": "url(#pp-r)", opacity: 0 });
-  svg.appendChild(copyPath);
-  var upPath = svgEl("path", { d: "M" + TX + "," + ly(PASTE) + " V64", fill: "none", stroke: "none" });
-  svg.appendChild(upPath);
-  var copyLabel = svgEl("text", { x: (SX + TX) / 2, y: ly(PASTE) - 56, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: "#D55E00", "font-family": PF, opacity: 0 }, "copy the saved state");
+  var S = grid(70, ["Source run", C.src[1]], [["star", "G"], ["circle", "C"], ["plus", "Z"], ["heart", "D"]], ["…the", "heart?", "Answer", ":"]);
+  var T = grid(560, ["Target run", C.tgt[1]], [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]], ["…the", "star?", "Answer", ":"]);
+  svg.appendChild(svgEl("text", { x: 58, y: cellY(0) + CH / 2, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: P_GRAY, "font-family": PF }, "layer 1"));
+  svg.appendChild(svgEl("text", { x: 58, y: cellY(ROWS - 1) + CH / 2, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: P_GRAY, "font-family": PF }, "layer 36"));
+  svg.appendChild(svgEl("text", { x: 450, y: BOT + 40, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: P_GRAY, "font-family": PF }, "each box is one activation: one token at one layer"));
+  // the picked activation, the copy, and labels
+  var ring = svgEl("rect", { x: cellX(S.x0, PC) - 4, y: cellY(PR) - 4, width: CW + 8, height: CH + 8, rx: 6, fill: "none", stroke: "#222", "stroke-width": 2.5, opacity: 0 });
+  var ring2 = svgEl("rect", { x: cellX(T.x0, PC) - 4, y: cellY(PR) - 4, width: CW + 8, height: CH + 8, rx: 6, fill: "none", stroke: "#222", "stroke-width": 2.5, opacity: 0 });
+  svg.appendChild(ring); svg.appendChild(ring2);
+  var x0 = cellX(S.x0, PC) + CW / 2, x1 = cellX(T.x0, PC) + CW / 2, y = cellY(PR) - 6;
+  var copy = svgEl("path", { d: "M" + x0 + "," + y + " C" + x0 + "," + (y - 120) + " " + x1 + "," + (y - 120) + " " + x1 + "," + y, fill: "none", stroke: "#222", "stroke-width": 2, "stroke-dasharray": "6 5", opacity: 0 });
+  svg.appendChild(copy);
+  var copyLabel = svgEl("text", { x: (x0 + x1) / 2, y: y - 100, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: "#222", "font-family": PF, opacity: 0 }, "copy, and replace");
   svg.appendChild(copyLabel);
   mv.front();
 
-  function setAns(g, a, changed) {
+  function paint(g, kind, filter) {
+    g.cells.forEach(function (col, c) { col.forEach(function (r, i) { if (!filter || filter(c, i)) { r.setAttribute("fill", C[kind][0]); r.setAttribute("stroke", C[kind][1]); } }); });
+  }
+  function answer(g, a, kind) {
     g.letter.textContent = a;
-    g.bubble.setAttribute("fill", changed ? "#D55E00" : "#F6D5DF");
-    g.letter.setAttribute("fill", changed ? "#fff" : "#3A1D2A");
+    g.bubble.setAttribute("fill", a ? C[kind][0] : "#fff"); g.bubble.setAttribute("stroke", a ? C[kind][1] : "#ccc");
+    g.letter.setAttribute("fill", a ? C[kind][1] : "#333");
+  }
+  function after(c, r) { return c >= PC && r > PR; }        // computed after the pasted activation
+  function fillUp(g, kind, t0, filter, done) {               // fill the grid row by row, bottom to top
+    for (var r = 0; r < ROWS; r++) (function (r) {
+      mv.at(t0 + r * 160, function () { paint(g, kind, function (c, i) { return i === r && (!filter || filter(c, i)); }); });
+    })(r);
+    if (done) mv.at(t0 + ROWS * 160, done);
   }
   var FRAMES = [
-    'Two runs of the same model on two different puzzles. The <b>source</b> asks for the heart and answers <span class="tok">D</span>. The <b>target</b> asks for the star and answers <span class="tok">T</span>. Each run sends its residual stream up through the layers.',
-    '<b>Save.</b> We run the source and save its residual stream at one token and one layer: the numbers inside the orange circle.',
-    '<b>Paste.</b> We run the target again. When it reaches the same layer, we throw away its own state at that spot and paste in the saved one. Everything else stays the same: same picture, same question.',
-    '<b>Read the answer.</b> The rest of the target run continues as usual, building on the pasted state. Its answer changes from <span class="tok">T</span> to <span class="tok">K</span>, the letter in its own panel 4. So the pasted state must have carried a place: <i>"look in panel 4"</i>.',
-    'That is <b>activation patching</b>: copy one piece of the VLM\'s work from one run into another, and see what changes. By choosing where we paste (which token, which layer, even which single attention head), we can find where each piece of information lives.'
+    '<b>The source run.</b> We run the VLM on the first puzzle, which asks for the heart. Each box is one <b>activation</b>: the state of one token at one layer. They fill in from the bottom layer up, and the source answers <span class="tok">D</span>.',
+    '<b>The target run.</b> Separately, we run the VLM on the second puzzle, which asks for the star, with no changes. The target answers <span class="tok">T</span>.',
+    '<b>Pick one activation.</b> We choose one activation in the source run: here, the word <span class="tok">heart?</span> at one of the middle layers.',
+    '<b>Copy and replace.</b> We run the target again, but at that same word and layer we throw away its own activation and put the source\'s in its place. Everything below it, and everything before it, stays exactly as it was.',
+    '<b>Run the rest.</b> Everything the target computes after that point is built on the pasted activation, so it changes too (orange): the higher layers of that word, and the layers of every word after it. The answer changes from <span class="tok">T</span> to <span class="tok">K</span>.',
+    'That is <b>activation patching</b>. Only one activation was swapped, so the change in the answer must come from what that one activation carried. Here, <span class="tok">K</span> is the letter in the target\'s own panel 4, where the source\'s heart was. So the pasted activation carried a place, <i>"look in panel 4"</i>. By choosing which activation to swap (which word, which layer, even which single attention head), we can find where each piece of information lives.'
   ];
   makeStepper(document.getElementById("primer-patching"), FRAMES, function (n) {
     mv.clear();
-    S.ring.setAttribute("opacity", n >= 1 ? 1 : 0);
-    T.ring.setAttribute("opacity", n >= 2 ? 1 : 0);
-    copyPath.setAttribute("opacity", n >= 2 ? 1 : 0);
-    copyLabel.setAttribute("opacity", n >= 2 ? 1 : 0);
-    T.upper.setAttribute("opacity", n >= 3 ? 1 : 0);
-    setAns(T, n >= 3 ? "K" : n === 2 ? "?" : "T", n >= 3);
-    if (n === 2) { mv.along(copyPath, "#D55E00", 0, 1200, 8); mv.run(); }
+    var anim = !mv.reduce;
+    // the state each step ends in
+    paint(S, n >= 1 || !anim ? "src" : "none");
+    paint(T, n >= 2 || (n === 1 && !anim) ? "tgt" : "none");
+    if (n >= 3) paint(T, "src", function (c, r) { return c === PC && r === PR; });
+    if (n >= 4) paint(T, "chg", after);
+    answer(S, n >= 1 || !anim ? "D" : "", "src");
+    answer(T, n >= 4 ? "K" : n === 3 ? "?" : n >= 2 || (n === 1 && !anim) ? "T" : "", n >= 4 ? "chg" : "tgt");
+    ring.setAttribute("opacity", n >= 2 ? 1 : 0);
+    ring2.setAttribute("opacity", n >= 3 ? 1 : 0);
+    copy.setAttribute("opacity", n >= 3 ? 1 : 0); copyLabel.setAttribute("opacity", n >= 3 ? 1 : 0);
+    if (!anim) return;
+    // how each step gets there
+    if (n === 0) fillUp(S, "src", 200, null, function () { answer(S, "D", "src"); });
+    if (n === 1) fillUp(T, "tgt", 200, null, function () { answer(T, "T", "tgt"); });
     if (n === 3) {
-      mv.along(upPath, "#D55E00", 0, 900, 6); mv.run();
+      paint(T, "tgt");
+      mv.along(copy, C.src[1], 200, 1100, 8);
+      mv.at(1300, function () { paint(T, "src", function (c, r) { return c === PC && r === PR; }); });
     }
-  });
+    if (n === 4) {
+      paint(T, "tgt"); paint(T, "src", function (c, r) { return c === PC && r === PR; }); answer(T, "?", "tgt");
+      for (var r = PR + 1; r < ROWS; r++) (function (r) {
+        mv.at(300 + (r - PR - 1) * 300, function () { paint(T, "chg", function (c, i) { return i === r && after(c, i); }); });
+      })(r);
+      mv.at(300 + (ROWS - PR - 1) * 300, function () { answer(T, "K", "chg"); });
+    }
+    mv.run();
+  }, 4200);
 })();
 
 </script>
