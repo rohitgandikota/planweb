@@ -262,16 +262,7 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 </div>
 
 
-<p>Try it yourself below. We paste the source's state at the last token before the answer, the colon after <i>"Answer"</i>. Drag the slider to choose the layer.</p>
-<figure id="patch" class="interactive" aria-label="Interactive demo of activation patching">
-  <div class="stage"><svg id="patch-svg" viewBox="0 0 900 460" role="img" aria-label="Two stacks of 36 layers, the source run and the target run, with a state copied from one to the other at the chosen layer"></svg></div>
-  <div class="controls">
-    <label for="patch-layer">Paste at layer <b id="patch-l">25</b></label>
-    <input type="range" id="patch-layer" min="0" max="35" value="25" step="1">
-  </div>
-  <div class="say" id="patch-say" aria-live="polite"></div>
-</figure>
-<p>Look at what happens as you move up. Low in the stack, pasting changes nothing. In the middle, around layers 23 to 29, the target answers <span class="tok">K</span>: the pasted state says <i>"the answer is in panel 4"</i>, and the target goes and reads its own panel 4. Near the top, the target simply copies the source's letter <span class="tok">D</span>. So halfway through, the VLM already knows <i>where</i> the answer is, but has not yet read <i>what</i> it is. We call that kind of "look here" note a <b>pointer</b>.</p>
+<p>Our first patch is at the colon after <i>"Answer"</i>, the last token before the answer, one layer at a time. Low in the stack, pasting changes nothing. In the middle, around layers 23 to 29, the target answers <span class="tok">K</span>: the pasted state says <i>"the answer is in panel 4"</i>, and the target goes and reads its own panel 4. Near the top, the target simply copies the source's letter <span class="tok">D</span>. So halfway through, the VLM already knows <i>where</i> the answer is, but has not yet read <i>what</i> it is. We call that kind of "look here" note a <b>pointer</b>.</p>
 
 <h2>Binding: when does the VLM decide where to look?</h2>
 <p>If the colon already holds a pointer by the middle layers, the pointer must have been made somewhere before it. So we repeated the pasting at every token of the question, at every layer. Only one other token lit up: the shape word itself, <span class="tok">star</span>. The VLM works out where the star is while it is still reading the question.</p>
@@ -279,7 +270,7 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <p>We could even split their job in two. Remember that a head matches its <b>query</b>, what it is looking for, against the <b>keys</b> of the image tokens, the labels they carry. When we pasted only the queries, the target searched for a heart in its own picture and answered <span class="tok">P</span>. When we pasted only the image keys, the target searched for its own star among the source's shapes and answered <span class="tok">R</span>. When we pasted both, the pointer itself moved. In plain words, the head says <i>"I need a star"</i>, and the patches answer <i>"I am the panel with the star."</i></p>
 <figure class="center_image" style="margin-top: 30px">
   <center><img src="images/paper/binding.png" style="width:100%; max-width:900px" alt="Three plots from the paper on where the pointer appears."></center>
-  <figcaption><b>Finding where the VLM decides where to look.</b> (a) Pasting at the colon, one layer at a time, as in the slider above. Each line is how often the target gives one of the five letters. The low layers keep <span class="tok">T</span>, the middle layers give <span class="tok">K</span>, and the top layers give <span class="tok">D</span>. (b) The same pasting at every token (across) and every layer (up and down). Darker means the pointer moved more often. Only two spots light up: the word <span class="tok">star</span> around layer 20, and the colon from layer 23 on. (c) Each small square is one attention head at the word <span class="tok">star</span>, pasted on its own. The 16 outlined heads, in layers 15 to 21, carry the pointer: <b>the VLM decides where to look while it is still reading the question.</b></figcaption>
+  <figcaption><b>Finding where the VLM decides where to look.</b> (a) Pasting at the colon, one layer at a time. Each line is how often the target gives one of the five letters. The low layers keep <span class="tok">T</span>, the middle layers give <span class="tok">K</span>, and the top layers give <span class="tok">D</span>. (b) The same pasting at every token (across) and every layer (up and down). Darker means the pointer moved more often. Only two spots light up: the word <span class="tok">star</span> around layer 20, and the colon from layer 23 on. (c) Each small square is one attention head at the word <span class="tok">star</span>, pasted on its own. The 16 outlined heads, in layers 15 to 21, carry the pointer: <b>the VLM decides where to look while it is still reading the question.</b></figcaption>
 </figure>
 
 <h2>Relay: how does the pointer travel to the answer?</h2>
@@ -572,98 +563,7 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
   show(0);
 })();
 
-/* Activation patching demo: two stacks of 36 layers, paste the source's state into the target at one layer. */
-(function () {
-  var NS = "http://www.w3.org/2000/svg";
-  var svg = document.getElementById("patch-svg");
-  if (!svg) return;
-  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var SX = 250, TX = 650, W = 150, BOTTOM = 352, H = 8;
-  function ly(l) { return BOTTOM - (l + 1) * H; }          // top edge of layer l, layer 0 at the bottom
-  function el(tag, attrs, text) {
-    var e = document.createElementNS(NS, tag);
-    for (var k in attrs) e.setAttribute(k, attrs[k]);
-    if (text != null) e.textContent = text;
-    return e;
-  }
-  var FONT = "Open Sans, sans-serif";
 
-  function tower(cx, title, strip, question, answer) {
-    svg.appendChild(el("text", { x: cx, y: 18, "text-anchor": "middle", "font-size": "15", "font-weight": "700", fill: "#3A1D2A", "font-family": FONT }, title));
-    var slabs = [];
-    for (var l = 0; l < 36; l++) {
-      var r = el("rect", { x: cx - W / 2, y: ly(l), width: W, height: H - 1.5, rx: 1.5, fill: "#ece9eb" });
-      svg.appendChild(r); slabs.push(r);
-    }
-    // the picture and question go in at the bottom
-    strip.forEach(function (p, i) {
-      var x = cx - 2 * 34 + i * 34;
-      svg.appendChild(el("rect", { x: x, y: 364, width: 34, height: 34, fill: "#fff", stroke: "#222", "stroke-width": "1.2" }));
-      var g = el("g", { transform: "translate(" + (x + 2) + ",366) scale(0.3)" });
-      g.innerHTML = shapeSVG(p[0], p[1]);
-      svg.appendChild(g);
-    });
-    svg.appendChild(el("text", { x: cx, y: 420, "text-anchor": "middle", "font-size": "13", fill: "#333", "font-family": "JetBrains Mono, Menlo, monospace" }, question));
-    // the answer comes out at the top
-    var bubble = el("circle", { cx: cx, cy: 46, r: 17, fill: "#F6D5DF", stroke: "#8C3B5A", "stroke-width": "1.5" });
-    var letter = el("text", { x: cx, y: 52, "text-anchor": "middle", "font-size": "18", "font-weight": "700", fill: "#3A1D2A", "font-family": FONT }, answer);
-    svg.appendChild(bubble); svg.appendChild(letter);
-    svg.appendChild(el("line", { x1: cx, y1: ly(35) - 2, x2: cx, y2: 64, stroke: "#bbb", "stroke-width": "1.5" }));
-    return { slabs: slabs, bubble: bubble, letter: letter };
-  }
-  var src = tower(SX, "Source run", [["star", "G"], ["circle", "C"], ["plus", "Z"], ["heart", "D"]], "...inside the heart? Answer:", "D");
-  var tgt = tower(TX, "Target run", [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]], "...inside the star? Answer:", "T");
-
-  // layer numbers between the two stacks
-  [0, 10, 20, 30, 35].forEach(function (l) {
-    svg.appendChild(el("text", { x: 450, y: ly(l) + 6, "text-anchor": "middle", "font-size": "11", fill: "#6b6b6b", "font-family": FONT }, "layer " + l));
-  });
-  svg.appendChild(el("text", { x: 450, y: 448, "text-anchor": "middle", "font-size": "12", fill: "#6b6b6b", "font-family": FONT }, "picture and question go in at the bottom, the answer comes out at the top"));
-
-  var chip = el("rect", { width: 34, height: 12, rx: 3, fill: "#8C3B5A", opacity: 0 });
-  svg.appendChild(chip);
-
-  var RESULTS = [
-    { upTo: 20, a: "T", say: 'Nothing changes. The target still answers <span class="tok">T</span>. This low in the stack, the colon holds nothing the target can use.' },
-    { upTo: 22, a: "T/K", say: 'In between. The answer is starting to change from <span class="tok">T</span> to <span class="tok">K</span>, as the pointer forms in the layers just above.' },
-    { upTo: 29, a: "K", say: 'The target answers <span class="tok">K</span>, the letter in its own panel 4. The pasted state carried a <b>place</b>, "look in panel 4", and the target read its own picture there.' },
-    { upTo: 35, a: "D", say: 'The target answers <span class="tok">D</span>, the source\'s own letter. By now the VLM has already read the panel, so we pasted the finished answer.' }
-  ];
-  var slider = document.getElementById("patch-layer"), num = document.getElementById("patch-l"), say = document.getElementById("patch-say");
-  var lit = -1, raf = null;
-  function update() {
-    var L = +slider.value;
-    num.textContent = L;
-    if (lit >= 0) { src.slabs[lit].setAttribute("fill", "#ece9eb"); tgt.slabs[lit].setAttribute("fill", "#ece9eb"); }
-    lit = L;
-    src.slabs[L].setAttribute("fill", "#8C3B5A");
-    var res = RESULTS.filter(function (r) { return L <= r.upTo; })[0];
-    say.innerHTML = '<b>Pasting at layer ' + L + '.</b> ' + res.say;
-    var x0 = SX + W / 2, x1 = TX - W / 2 - 34, y = ly(L) - 2;
-    function land() {
-      chip.setAttribute("opacity", 0);
-      tgt.slabs[L].setAttribute("fill", "#8C3B5A");
-      tgt.letter.textContent = res.a;
-      tgt.letter.setAttribute("font-size", res.a.length > 1 ? "12" : "18");
-      tgt.bubble.setAttribute("fill", res.a === "T" ? "#F6D5DF" : "#8C3B5A");
-      tgt.letter.setAttribute("fill", res.a === "T" ? "#3A1D2A" : "#ffffff");
-    }
-    cancelAnimationFrame(raf);
-    if (reduce) { land(); return; }
-    tgt.slabs.forEach(function (s) { s.setAttribute("fill", "#ece9eb"); });
-    var t0 = null;
-    chip.setAttribute("opacity", 1);
-    (function step(t) {
-      if (t0 === null) t0 = t;
-      var k = Math.min(1, (t - t0) / 650), e = k * k * (3 - 2 * k);
-      chip.setAttribute("x", x0 + (x1 - x0) * e);
-      chip.setAttribute("y", y - 40 * Math.sin(Math.PI * e));
-      if (k < 1) raf = requestAnimationFrame(step); else land();
-    })(performance.now());
-  }
-  slider.addEventListener("input", update);
-  update();
-})();
 
 /* Primer animations. Each one is a list of frames; Back, Next, and Play step through them. */
 function makeStepper(root, frames, draw, interval) {
