@@ -237,7 +237,13 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <div class="stage"><svg id="pp-svg" viewBox="0 0 900 400" role="img" aria-label="Two runs of the VLM; a state saved from the source run is pasted into the target run at the same layer, and the target's answer changes"></svg></div>
 <div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
 <div class="say" aria-live="polite"></div>
-<p style="margin-top: 1rem"><b>Why the letters tell us so much.</b> We build every pair so that each kind of information the pasted state could carry leads to a different letter.</p>
+
+</div>
+</details>
+
+<div class="demo">
+<h3>Why does one letter tell us so much?</h3>
+<p>Patching only works if the answer tells us what the pasted activation carried. So we build every pair of puzzles so that each kind of information it could carry leads the target to a different letter.</p>
 <div class="pair">
   <span class="lab">Source</span>
   <div><div class="strip" style="--n:4" data-strip="star:G circle:C plus:Z heart:D" data-hit="3"></div><div class="prompt">...inside the heart? &nbsp;<span class="ans">D</span></div></div>
@@ -252,9 +258,9 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
   <div><span class="L">P</span>The question moved over: "find the heart". The target found the heart in its own picture.</div>
   <div><span class="L">R</span>The layout moved over: the target searched for its star among the source's shapes.</div>
 </div>
-<p style="margin-top: 1rem">One more check runs through every experiment. Whenever we paste a team of heads, we also paste the same number of heads picked at random from the same layers. If the random heads do nothing, the effect belongs to the team we found, not to pasting heads in general.</p>
+<p>One more check runs through every experiment. Whenever we paste a team of heads, we also paste the same number of heads picked at random from the same layers. If the random heads do nothing, the effect belongs to the team we found, not to pasting heads in general.</p>
 </div>
-</details>
+
 
 <p>Try it yourself below. We paste the source's state at the last token before the answer, the colon after <i>"Answer"</i>. Drag the slider to choose the layer.</p>
 <figure id="patch" class="interactive" aria-label="Interactive demo of activation patching">
@@ -1311,18 +1317,26 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     g.letter.setAttribute("fill", a ? C[kind][1] : "#333");
   }
   function after(c, r) { return c >= PC && r > PR; }        // computed after the pasted activation
-  function fillUp(g, kind, t0, filter, done) {               // fill the grid row by row, bottom to top
-    for (var r = 0; r < ROWS; r++) (function (r) {
-      mv.at(t0 + r * 160, function () { paint(g, kind, function (c, i) { return i === r && (!filter || filter(c, i)); }); });
-    })(r);
-    if (done) mv.at(t0 + ROWS * 160, done);
+  // a cursor marks the activation being computed; the VLM runs token by token, each token from layer 1 up
+  var cursor = svgEl("rect", { width: CW + 6, height: CH + 6, rx: 6, fill: "none", stroke: "#222", "stroke-width": 2.5, opacity: 0 });
+  svg.appendChild(cursor);
+  var STEP = 95;
+  function sweep(g, t0, from, kindOf, done) {                 // from = [col, row] to start at; kindOf(c, r) gives the color
+    var t = t0;
+    for (var c = from[0]; c < COLS; c++) for (var r = (c === from[0] ? from[1] : 0); r < ROWS; r++) (function (c, r, t) {
+      mv.at(t, function () {
+        cursor.setAttribute("x", cellX(g.x0, c) - 3); cursor.setAttribute("y", cellY(r) - 3); cursor.setAttribute("opacity", 1);
+        paint(g, kindOf(c, r), function (cc, rr) { return cc === c && rr === r; });
+      });
+    })(c, r, t), t += STEP;
+    mv.at(t, function () { cursor.setAttribute("opacity", 0); if (done) done(); });
   }
   var FRAMES = [
-    '<b>The source run.</b> We run the VLM on the first puzzle, which asks for the heart. Each box is one <b>activation</b>: the state of one token at one layer. They fill in from the bottom layer up, and the source answers <span class="tok">D</span>.',
+    '<b>The source run.</b> We run the VLM on the first puzzle, which asks for the heart. Each box is one <b>activation</b>: the state of one token at one layer. The VLM computes them one token at a time: the first token from layer 1 up to layer 36, then the next token, and so on. The source answers <span class="tok">D</span>.',
     '<b>The target run.</b> Separately, we run the VLM on the second puzzle, which asks for the star, with no changes. The target answers <span class="tok">T</span>.',
     '<b>Pick one activation.</b> We choose one activation in the source run: here, the word <span class="tok">heart?</span> at one of the middle layers.',
     '<b>Copy and replace.</b> We run the target again, but at that same word and layer we throw away its own activation and put the source\'s in its place. Everything below it, and everything before it, stays exactly as it was.',
-    '<b>Run the rest.</b> Everything the target computes after that point is built on the pasted activation, so it changes too (orange): the higher layers of that word, and the layers of every word after it. The answer changes from <span class="tok">T</span> to <span class="tok">K</span>.',
+    '<b>Run the rest.</b> The target keeps running, token by token. Everything it computes after the pasted activation is built on it, so it changes too (orange): the higher layers of that word, and the higher layers of every word after it. The lower layers of later words only read lower layers, so they stay the same. The answer changes from <span class="tok">T</span> to <span class="tok">K</span>.',
     'That is <b>activation patching</b>. Only one activation was swapped, so the change in the answer must come from what that one activation carried. Here, <span class="tok">K</span> is the letter in the target\'s own panel 4, where the source\'s heart was. So the pasted activation carried a place, <i>"look in panel 4"</i>. By choosing which activation to swap (which word, which layer, even which single attention head), we can find where each piece of information lives.'
   ];
   makeStepper(document.getElementById("primer-patching"), FRAMES, function (n) {
@@ -1340,8 +1354,9 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     copy.setAttribute("opacity", n >= 3 ? 1 : 0); copyLabel.setAttribute("opacity", n >= 3 ? 1 : 0);
     if (!anim) return;
     // how each step gets there
-    if (n === 0) fillUp(S, "src", 200, null, function () { answer(S, "D", "src"); });
-    if (n === 1) fillUp(T, "tgt", 200, null, function () { answer(T, "T", "tgt"); });
+    cursor.setAttribute("opacity", 0);
+    if (n === 0) sweep(S, 200, [0, 0], function () { return "src"; }, function () { answer(S, "D", "src"); });
+    if (n === 1) sweep(T, 200, [0, 0], function () { return "tgt"; }, function () { answer(T, "T", "tgt"); });
     if (n === 3) {
       paint(T, "tgt");
       mv.along(copy, C.src[1], 200, 1100, 8);
@@ -1349,10 +1364,7 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     }
     if (n === 4) {
       paint(T, "tgt"); paint(T, "src", function (c, r) { return c === PC && r === PR; }); answer(T, "?", "tgt");
-      for (var r = PR + 1; r < ROWS; r++) (function (r) {
-        mv.at(300 + (r - PR - 1) * 300, function () { paint(T, "chg", function (c, i) { return i === r && after(c, i); }); });
-      })(r);
-      mv.at(300 + (ROWS - PR - 1) * 300, function () { answer(T, "K", "chg"); });
+      sweep(T, 300, [PC, PR + 1], function (c, r) { return after(c, r) ? "chg" : "tgt"; }, function () { answer(T, "K", "chg"); });
     }
     mv.run();
   }, 4200);
