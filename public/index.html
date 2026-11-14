@@ -86,6 +86,8 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 .primer-body .controls button { font: 600 14px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); background: #fff; color: var(--rose-dark); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
 .primer-body .controls button:disabled { opacity: 0.35; cursor: default; }
 .primer-body .controls button[aria-pressed="true"] { background: var(--rose-dark); color: #fff; }
+.primer-body .controls button.head-toggle { border-color: var(--hc); color: var(--hc); }
+.primer-body .controls button.head-toggle[aria-pressed="true"] { background: var(--hc); color: #fff; }
 .primer-body .say { min-height: 4.5em; font-size: 15px; line-height: 1.55; }
 .mlp-box { transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: no-preference) { .mlp-box.pulse { animation: mlp-pulse 0.9s ease-in-out infinite; } }
@@ -167,12 +169,16 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 </details>
 
 <details class="primer" id="primer-multihead">
-<summary>Primer: what does it mean to have many heads?</summary>
+<summary>Primer: what is multi-head attention?</summary>
 <div class="primer-body">
-<p>A layer does not have just one attention head. It has many, working side by side on the same words. Each head learns its own query, key, and value tables, so each one asks its own question. Pick a head to see what it looks for and what it brings back to the word <span class="tok">it</span>.</p>
-<div class="stage"><svg id="mh-svg" viewBox="0 0 900 290" role="img" aria-label="Attention of the word it over earlier words, for one head or for all three heads"></svg></div>
-<div class="controls"><button type="button" data-head="0">Head 1</button><button type="button" data-head="1">Head 2</button><button type="button" data-head="2">Head 3</button><button type="button" data-head="3">All heads</button></div>
+<p>The last primer followed one attention head. A real layer runs many heads at once. Click through to see why, and how their results are put back together.</p>
+<div class="stage"><svg id="mh-svg" viewBox="0 0 900 430" role="img" aria-label="Several attention heads, each with its own query, key, and value tables, reading the same words and combining their results into the stream of it"></svg></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
 <div class="say" aria-live="polite"></div>
+<p style="margin-top: 1.2rem"><b>Try it.</b> Switch the heads on and off. Each line goes from <span class="tok">it</span> to a word it can look at, and a thicker line means more attention. This way of drawing heads comes from <a href="https://github.com/jessevig/bertviz">BertViz</a>, a popular tool for looking inside transformers.</p>
+<div class="stage"><svg id="hv-svg" viewBox="0 0 900 290" role="img" aria-label="Lines from the word it to earlier words, one color per head"></svg></div>
+<div class="controls" id="hv-controls"></div>
+<div class="say" id="hv-say" aria-live="polite"></div>
 </div>
 </details>
 
@@ -1046,56 +1052,165 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
   }, 4600);
 })();
 
-/* Primer 2b: many heads. Pick a head to see what it looks for, where its attention goes, and what it adds. */
+/* Primer 2b: multi-head attention. Part 1 steps from one head to many and how they are combined.
+   Part 2 is a head view in the style of BertViz: switch heads on and off and see where each one looks. Cartoon numbers. */
+var MH = {
+  TOK: ["The", "cat", "sat", "down", "because"],
+  HEADS: [
+    { name: "head 1", q: "who is \"it\"?", w: [2, 92, 3, 1, 2], out: "the cat", c: "#0072B2" },
+    { name: "head 2", q: "what came just before?", w: [2, 2, 3, 8, 85], out: "a reason", c: "#7B4FA0" },
+    { name: "head 3", q: "what happened?", w: [2, 4, 80, 12, 2], out: "sat down", c: "#D55E00" }
+  ]
+};
 (function () {
   var svg = document.getElementById("mh-svg"); if (!svg) return;
-  var PURPLE = "#7B4FA0", ORANGE = "#D55E00";
-  var TOK = ["The", "cat", "sat", "down", "because"], X = 770, TOKY = 250, BASE = 228, BARH = 120;
-  function px(i) { return 80 + i * 130; }
-  var HEADS = [
-    { name: "Head 1", q: "who is \"it\"?", w: [2, 92, 3, 1, 2], adds: "\"it\" = the cat", c: P_BLUE },
-    { name: "Head 2", q: "what came just before?", w: [2, 2, 3, 8, 85], adds: "a reason is being given", c: PURPLE },
-    { name: "Head 3", q: "what happened?", w: [2, 4, 80, 12, 2], adds: "the action was sitting down", c: ORANGE }
-  ];
+  blkMarkers(svg, "mh");
+  var defs = svgEl("defs", {});
+  MH.HEADS.forEach(function (h, j) {
+    var m = svgEl("marker", { id: "mh-h" + j, viewBox: "0 0 10 10", refX: 10, refY: 5, markerWidth: 9, markerHeight: 9, markerUnits: "userSpaceOnUse", orient: "auto" });
+    m.appendChild(svgEl("path", { d: "M0,0 L10,5 L0,10 z", fill: h.c })); defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+  var TOK = MH.TOK, X = 820, TOKY = 392, YBAR = 330, YH = 236, YOUT = 168, YSUM = 76;
+  function px(i) { return 70 + i * 118; }
+  var HX = [220, 430, 640];                              // where the three head boxes sit
   TOK.forEach(function (t, i) {
+    svg.appendChild(svgEl("line", { x1: px(i), y1: TOKY, x2: px(i), y2: 40, stroke: P_ROSE, "stroke-width": 3, opacity: 0.3 }));
     svg.appendChild(svgEl("rect", { x: px(i) - 42, y: TOKY, width: 84, height: 28, rx: 5, fill: "#f4f4f4", stroke: "#ccc" }));
     svg.appendChild(svgEl("text", { x: px(i), y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#333", "font-family": PM }, t));
-    svg.appendChild(svgEl("line", { x1: px(i) - 46, y1: BASE, x2: px(i) + 46, y2: BASE, stroke: "#ddd" }));
   });
+  svg.appendChild(svgEl("line", { x1: X, y1: TOKY, x2: X, y2: 26, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#mh-r)" }));
   svg.appendChild(svgEl("rect", { x: X - 34, y: TOKY, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
   svg.appendChild(svgEl("text", { x: X, y: TOKY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "it"));
-  svg.appendChild(svgEl("text", { x: 20, y: 22, "font-size": 12, fill: P_GRAY, "font-family": PF }, "how much attention the word \"it\" pays to each earlier word"));
-  var barLayer = svgEl("g", {}), addLayer = svgEl("g", {});
-  svg.appendChild(barLayer); svg.appendChild(addLayer);
-  function draw(sel) {                                 // sel: 0, 1, 2 for one head, 3 for all heads
-    while (barLayer.firstChild) barLayer.removeChild(barLayer.firstChild);
-    while (addLayer.firstChild) addLayer.removeChild(addLayer.firstChild);
-    var list = sel === 3 ? HEADS : [HEADS[sel]], bw = sel === 3 ? 22 : 44;
-    list.forEach(function (h, j) {
-      TOK.forEach(function (t, i) {
-        var off = sel === 3 ? (j - 1) * (bw + 4) : 0, hgt = 3 + (BARH - 3) * h.w[i] / 100;
-        barLayer.appendChild(svgEl("rect", { x: px(i) + off - bw / 2, y: BASE - hgt, width: bw, height: hgt, rx: 3, fill: h.c, opacity: 0.35 + 0.65 * h.w[i] / 100 }));
-        if (sel !== 3 || h.w[i] >= 50) barLayer.appendChild(svgEl("text", { x: px(i) + off, y: BASE - hgt - 10, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: h.c, "font-family": PF }, h.w[i] + "%"));
-      });
-      var y = sel === 3 ? 74 + j * 46 : 120;
-      addLayer.appendChild(svgEl("rect", { x: X - 100, y: y - 17, width: 200, height: 34, rx: 17, fill: h.c }));
-      addLayer.appendChild(svgEl("text", { x: X, y: y, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12.5, "font-weight": 700, fill: "#fff", "font-family": PF }, h.adds));
+
+  var groups = {};
+  function layer(name) { var g = svgEl("g", { opacity: 0 }); svg.appendChild(g); groups[name] = g; return g; }
+  // everything every head reads: all the words, the same for every head
+  var feed = layer("feed");
+  feed.appendChild(svgEl("rect", { x: px(0) - 44, y: YBAR - 8, width: X + 44 - (px(0) - 44), height: 16, rx: 8, fill: "#f6eef2", stroke: "#e6d0d8" }));
+  feed.appendChild(svgEl("text", { x: (px(0) + X) / 2, y: YBAR, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: P_ROSE, "font-family": PF }, "the same words go to every head"));
+  function headBox(parent, x, h, mk) {
+    parent.appendChild(svgEl("path", { d: "M" + x + "," + (YBAR - 9) + " V" + (YH + 33), fill: "none", stroke: h.c, "stroke-width": 2, "marker-end": "url(#" + mk + ")" }));
+    parent.appendChild(svgEl("rect", { x: x - 78, y: YH - 32, width: 156, height: 64, rx: 8, fill: "#fff", stroke: h.c, "stroke-width": 2 }));
+    parent.appendChild(svgEl("text", { x: x, y: YH - 16, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: h.c, "font-family": PF }, h.name));
+    ["Q", "K", "V"].forEach(function (s, k) {
+      var bx = x - 54 + k * 38;
+      parent.appendChild(svgEl("rect", { x: bx, y: YH - 2, width: 32, height: 22, rx: 4, fill: h.c, opacity: 0.85 }));
+      var t = svgEl("text", { x: bx + 16, y: YH + 9, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11, "font-weight": 700, fill: "#fff", "font-family": PF });
+      t.innerHTML = 'W<tspan baseline-shift="sub" font-size="8">' + s + "</tspan>";
+      parent.appendChild(t);
     });
-    addLayer.appendChild(svgEl("text", { x: X, y: sel === 3 ? 222 : 160, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: P_GRAY, "font-family": PF }, sel === 3 ? "all three are added to \"it\"" : "added to the stream of \"it\""));
   }
-  var root = document.getElementById("primer-multihead"), say = root.querySelector(".say"), btns = root.querySelectorAll("[data-head]");
-  var TEXT = [
-    '<b>Head 1</b> asks <i>"who is it?"</i>. Its query matches the key of <span class="tok">cat</span>, so almost all of its attention goes there, and it brings back that <span class="tok">it</span> means the cat.',
-    '<b>Head 2</b> asks <i>"what came just before?"</i>. Its own query matches a different key, so it looks at <span class="tok">because</span> and brings back that a reason is being given.',
-    '<b>Head 3</b> asks <i>"what happened?"</i>. It looks mostly at <span class="tok">sat</span> and brings back the action.',
-    '<b>All heads at once.</b> The three heads run side by side, on the same words, at the same time. Each has its own three learned tables, so each asks its own question and spreads its attention its own way. Their results are all added to the stream of <span class="tok">it</span>. This is <b>multi-head attention</b>. Our VLM has 32 heads in every layer, 1,152 in all, and this project is about finding the few that do one job each.'
+  var one = layer("one"); headBox(one, HX[1], { name: "one head", c: P_ROSE }, "mh-r");
+  var many = layer("many"); MH.HEADS.forEach(function (h, j) { headBox(many, HX[j], h, "mh-h" + j); });
+  many.appendChild(svgEl("text", { x: HX[1], y: YH - 54, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: P_GRAY, "font-family": PF }, "each head has its own tables"));
+  // where each head looks: lines from "it" to the earlier words, one color per head
+  var looks = layer("looks"), lookPaths = [];
+  MH.HEADS.forEach(function (h, j) {
+    TOK.forEach(function (t, i) {
+      if (h.w[i] < 5) return;
+      var y = TOKY - 6, peak = TOKY - 70 - j * 46 - (TOK.length - i) * 8;
+      var p = svgEl("path", { d: "M" + (X - 4) + "," + y + " Q" + (X + px(i)) / 2 + "," + peak + " " + (px(i) + 3) + "," + y, fill: "none", stroke: h.c, "stroke-width": 1 + 7 * h.w[i] / 100, opacity: 0.35 + 0.65 * h.w[i] / 100, "marker-end": "url(#mh-h" + j + ")" });
+      looks.appendChild(p); if (h.w[i] >= 50) lookPaths.push([p, h.c]);
+    });
+    looks.appendChild(svgEl("text", { x: 20 + j * 270, y: 70, "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: h.c, stroke: "#fff", "stroke-width": 5, "paint-order": "stroke", "font-family": PF }, h.name + ": " + h.q));
+  });
+  // each head's result, then side by side, through W_O, into the stream
+  var outs = layer("outs"), chips = [];
+  MH.HEADS.forEach(function (h, j) {
+    var g = svgEl("g", {});
+    g.appendChild(svgEl("rect", { x: -48, y: -14, width: 96, height: 28, rx: 6, fill: h.c }));
+    g.appendChild(svgEl("text", { x: 0, y: 0, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12.5, "font-weight": 700, fill: "#fff", "font-family": PF }, h.out));
+    outs.appendChild(g); chips.push(g);
+  });
+  function chipAt(j, x, y) { chips[j].setAttribute("transform", "translate(" + x + "," + y + ")"); }
+  var CAT = [450, 546, 642], WOX = 735;                      // concatenated positions, and the W_O table
+  var mix = layer("mix");
+  mix.appendChild(svgEl("rect", { x: CAT[0] - 52, y: YSUM - 18, width: CAT[2] - CAT[0] + 104, height: 36, rx: 8, fill: "none", stroke: "#bbb", "stroke-dasharray": "4 3" }));
+  mix.appendChild(svgEl("text", { x: (CAT[0] + CAT[2]) / 2, y: YSUM + 32, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: P_GRAY, "font-family": PF }, "placed side by side"));
+  mix.appendChild(svgEl("path", { d: "M" + (CAT[2] + 52) + "," + YSUM + " H" + (WOX - 24), fill: "none", stroke: "#666", "stroke-width": 2, "marker-end": "url(#mh-r)" }));
+  mix.appendChild(svgEl("rect", { x: WOX - 22, y: YSUM - 13, width: 44, height: 26, rx: 4, fill: "#fff", stroke: P_ROSE, "stroke-width": 2 }));
+  var wo = svgEl("text", { x: WOX, y: YSUM, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: P_ROSE, "font-family": PF });
+  wo.innerHTML = 'W<tspan baseline-shift="sub" font-size="9">O</tspan>'; mix.appendChild(wo);
+  var toPlus = svgEl("path", { d: "M" + (WOX + 22) + "," + YSUM + " H" + (X - BLK.r - 1), fill: "none", stroke: P_ROSE, "stroke-width": 2.5, "marker-end": "url(#mh-r)" });
+  mix.appendChild(toPlus);
+  mix.appendChild(svgEl("circle", { cx: X, cy: YSUM, r: BLK.r, fill: "#fff", stroke: P_ROSE, "stroke-width": 2.5 }));
+  mix.appendChild(svgEl("path", { d: "M" + (X - 6) + "," + YSUM + " H" + (X + 6) + " M" + X + "," + (YSUM - 6) + " V" + (YSUM + 6), stroke: P_ROSE, "stroke-width": 2.5, "stroke-linecap": "round" }));
+  var mv = makeMover(svg, "mh-glow");
+  mv.front();
+
+  var SHOW = [["feed", "one"], ["feed", "many"], ["looks"], ["feed", "many", "outs"], ["outs", "mix"], ["outs", "mix"]];
+  var FRAMES = [
+    '<b>One head.</b> In the last primer, one head read the earlier words and brought something back to <span class="tok">it</span>. All of its work came from three learned tables: <b>W<sub>Q</sub></b>, <b>W<sub>K</sub></b>, and <b>W<sub>V</sub></b>. With one head, the word <span class="tok">it</span> can ask only one question.',
+    '<b>Many heads.</b> So a layer runs several heads side by side. Each one gets the same words at the same time, but each has its <i>own</i> three tables. Different tables mean a different query, different keys, and different values, so each head asks a different question.',
+    '<b>Each head looks somewhere else.</b> Head 1 asks <i>"who is it?"</i> and looks at <span class="tok">cat</span>. Head 2 asks <i>"what came just before?"</i> and looks at <span class="tok">because</span>. Head 3 asks <i>"what happened?"</i> and looks at <span class="tok">sat</span>. Thicker lines mean more attention. No head is told what to ask: each one learns its question during training.',
+    '<b>Each head brings back its own result.</b> Each one runs the same steps as before, query, keys, softmax, and a weighted sum of values, and comes back with its own small piece of information.',
+    '<b>Combine.</b> The results are placed side by side, mixed by one more learned table, <b>W<sub>O</sub></b> (the <i>output</i> table), and added to the stream of <span class="tok">it</span> at the plus. Now the stream holds all three answers at once.',
+    '<b>In our VLM.</b> Every layer has 32 heads, and with 36 layers that makes 1,152 heads. The stream of each token is a list of 4,096 numbers, and each head works with 128 of them, so the heads are small and cheap. (To save memory, our VLM lets groups of four heads share their key and value tables, but every head keeps its own query.) This project is about finding the few heads, out of all 1,152, that do one job each in the plan.'
   ];
-  function pick(sel) {
-    draw(sel); say.innerHTML = TEXT[sel];
-    btns.forEach(function (b) { b.setAttribute("aria-pressed", +b.getAttribute("data-head") === sel ? "true" : "false"); });
+  makeStepper(document.getElementById("primer-multihead"), FRAMES, function (n) {
+    mv.clear();
+    Object.keys(groups).forEach(function (g) { groups[g].setAttribute("opacity", SHOW[n].indexOf(g) >= 0 ? 1 : 0); });
+    chips.forEach(function (c, j) { chipAt(j, n >= 4 ? CAT[j] : HX[j], n >= 4 ? YSUM : YOUT); });
+    if (mv.reduce) return;
+    if (n === 1) MH.HEADS.forEach(function (h, j) { mv.along(mv.path("M" + HX[j] + "," + (YBAR - 9) + " V" + (YH + 33)), h.c, j * 80, 700, 6); });
+    if (n === 2) lookPaths.forEach(function (a, j) {
+      mv.along(mv.path(a[0].getAttribute("d")), a[1], 300 + j * 300, 1200, 6, true);   // from the word into "it"
+    });
+    if (n === 3) {
+      groups.outs.setAttribute("opacity", 0);
+      MH.HEADS.forEach(function (h, j) { mv.along(mv.path("M" + HX[j] + "," + (YH - 32) + " V" + (YOUT + 14)), h.c, j * 120, 600, 6); });
+      mv.at(800, function () { groups.outs.setAttribute("opacity", 1); });
+    }
+    if (n === 4) {
+      chips.forEach(function (c, j) { chipAt(j, HX[j], YOUT); });
+      mv.tween(0, 1000, function (k) { chips.forEach(function (c, j) { chipAt(j, HX[j] + (CAT[j] - HX[j]) * k, YOUT + (YSUM - YOUT) * k); }); });
+      mv.along(toPlus, P_ROSE, 1300, 600, 8);
+      mv.rest(X, YSUM, P_ROSE, 1900, 7);
+    }
+    mv.run();
+  }, 4400);
+})();
+
+/* Part 2: head view. Switch heads on and off; lines go from "it" to the words it attends to. */
+(function () {
+  var svg = document.getElementById("hv-svg"); if (!svg) return;
+  var TOK = MH.TOK.concat(["it"]), LX = 300, RX = 600, Y0 = 34, DY = 40;
+  function ty(i) { return Y0 + i * DY; }
+  TOK.forEach(function (t, i) {
+    var me = i === TOK.length - 1;
+    svg.appendChild(svgEl("text", { x: LX, y: ty(i), "text-anchor": "end", "dominant-baseline": "central", "font-size": 15, fill: me ? "#bbb" : "#333", "font-family": PM }, t));
+    svg.appendChild(svgEl("rect", { x: RX + 4, y: ty(i) - 13, width: 70, height: 26, rx: 5, fill: me ? "#F6D5DF" : "none", stroke: me ? P_ROSE : "none" }));
+    svg.appendChild(svgEl("text", { x: RX + 12, y: ty(i), "text-anchor": "start", "dominant-baseline": "central", "font-size": 15, fill: me ? "#3A1D2A" : "#bbb", "font-family": PM }, t));
+  });
+  svg.appendChild(svgEl("text", { x: LX, y: ty(TOK.length) - 8, "text-anchor": "end", "font-size": 12, fill: P_GRAY, "font-family": PF }, "words it can look at"));
+  svg.appendChild(svgEl("text", { x: RX + 12, y: ty(TOK.length) - 8, "font-size": 12, fill: P_GRAY, "font-family": PF }, "the word looking"));
+  var lines = svgEl("g", {}); svg.appendChild(lines);
+  var on = [true, true, true];
+  var root = document.getElementById("hv-controls"), say = document.getElementById("hv-say");
+  function draw() {
+    while (lines.firstChild) lines.removeChild(lines.firstChild);
+    var active = [];
+    MH.HEADS.forEach(function (h, j) {
+      if (!on[j]) return;
+      active.push(h);
+      MH.TOK.forEach(function (t, i) {
+        var w = h.w[i] / 100, off = (j - 1) * 3;
+        lines.appendChild(svgEl("line", { x1: RX, y1: ty(TOK.length - 1) + off, x2: LX + 8, y2: ty(i) + off, stroke: h.c, "stroke-width": 0.5 + 9 * w, opacity: 0.15 + 0.85 * w, "stroke-linecap": "round" }));
+      });
+    });
+    say.innerHTML = active.length === 0 ? "Turn on a head to see where it looks." :
+      active.map(function (h) { return '<b style="color:' + h.c + '">' + h.name + '</b> asks <i>' + h.q + '</i> and looks mostly at <span class="tok">' + MH.TOK[h.w.indexOf(Math.max.apply(null, h.w))] + '</span>.'; }).join(" ") +
+      (active.length > 1 ? " Together, the heads bring back more than any one of them could." : "");
   }
-  btns.forEach(function (b) { b.addEventListener("click", function () { pick(+b.getAttribute("data-head")); }); });
-  pick(0);
+  MH.HEADS.forEach(function (h, j) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "head-toggle"; b.textContent = h.name; b.style.setProperty("--hc", h.c);
+    b.setAttribute("aria-pressed", "true");
+    b.addEventListener("click", function () { on[j] = !on[j]; b.setAttribute("aria-pressed", on[j] ? "true" : "false"); draw(); });
+    root.appendChild(b);
+  });
+  draw();
 })();
 
 /* Primer 3: activation patching. Two runs; save a state from the source, paste it into the target at the same layer. */
