@@ -72,6 +72,8 @@ figcaption { font-size: 13px; line-height: 1.5; text-align: left; max-width: 800
 #plan button[aria-pressed="true"] { background: var(--rose-dark); color: #fff; }
 #plan button:focus-visible { outline: 2px solid var(--bind); outline-offset: 2px; }
 #plan .pv-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 14px; }
+#plan .pv-top { justify-content: space-between; }
+#plan .pv-top #pv-play { margin-left: auto; }
 #plan .pv-scroll { overflow-x: auto; }
 #plan .pv-scene { position: relative; min-width: 600px; max-width: 900px; margin: 0 auto; }
 #plan .pv-scene .pv-strip { width: 66.667%; margin: 0 auto; }
@@ -86,7 +88,9 @@ figcaption { font-size: 13px; line-height: 1.5; text-align: left; max-width: 800
 #plan .pv-tokC { background: var(--tint); border-color: var(--rose-dark); font-weight: 700; }
 #plan .pv-tokG { background: #fff; border-color: var(--rose-dark); color: var(--rose-dark); font-weight: 700; animation: pv-fadein .5s ease both; }
 #plan #pv-ans { display: contents; }
-#plan .pv-steps { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+#plan .pv-steps { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+#plan #pv-play, #plan .pv-steps button { font-size: 16px; padding: 8px 20px; border-width: 1.5px; }
+@media (max-width: 600px) { #plan #pv-play, #plan .pv-steps button { font-size: 14px; padding: 6px 14px; } }
 #plan .pv-steps button { border-color: var(--c); color: var(--c); }
 #plan .pv-steps button[aria-pressed="true"] { background: var(--c); color: #fff; }
 #plan .pv-modes { display: inline-flex; }
@@ -284,7 +288,7 @@ The VLM uses the same pointers to keep track of what it has already said. Every 
 <p>Click through the steps below. Each column is one token, drawn as its stack of 36 layers.</p>
 <figure id="plan" aria-label="Interactive walk-through of the plan">
 <div class="pv-card">
-  <div class="pv-picker"><span id="pv-modes" class="pv-modes"></span></div>
+  <div class="pv-picker pv-top"><span id="pv-modes" class="pv-modes"></span><button id="pv-play" type="button" aria-pressed="false">Play</button></div>
   <div class="pv-picker"><span id="pv-lead"></span> <span id="pv-asks"></span></div>
   <div class="pv-scroll"><div class="pv-scene">
     <div class="pv-strip"><img id="pv-pic" alt="A row of panels, each with a shape and a letter"><canvas id="pv-heat"></canvas></div>
@@ -292,7 +296,6 @@ The VLM uses the same pointers to keep track of what it has already said. Every 
   </div></div>
   <p class="pv-question" id="pv-question"></p>
   <div class="pv-controls" style="justify-content:center">
-    <button id="pv-play" type="button" aria-pressed="false">Play</button>
     <span id="pv-steps" class="pv-steps"></span>
   </div>
   <p class="pv-say" id="pv-say" aria-live="polite"></p>
