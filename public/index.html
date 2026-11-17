@@ -192,7 +192,10 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 A <b>vision-language model</b>, or <b>VLM</b>, looks at a picture and answers questions about it in words. Ask one what animals are in a photo, and it names them one at a time: a dog, then a cat, then a horse. It rarely names the same animal twice, and it rarely skips one. Yet a picture has no reading order. Nothing in a photo says the dog comes before the cat. So something inside the VLM must decide what to describe next, and keep track of what it has already said.
 </p>
 <p>
-We opened up a VLM and traced how it does this. We find that the VLM <b>decides where to look before it looks</b>. It keeps a small plan. First, it finds the parts of the picture that answer the question. After every answer, it marks how far it has come through the picture. Then it picks the next part to describe, looks there, and puts what it sees into words. Each step runs through a few attention heads, so we can read the plan and edit it.
+We opened up a VLM and traced how it does this. We find that the VLM <b>plans on the image itself</b>. To answer a question, it does not look up the answer directly. It first finds <i>where</i> the answer is in the image, and keeps a pointer to that place. It passes this pointer along to the token where the answer will be written. There, a separate set of attention heads follows the pointer back to the image and fetches what is there.
+</p>
+<p>
+The VLM uses the same pointers to keep track of what it has already said. Every answer it writes, it ties back to the place in the image the answer came from. Before it writes the next answer, it looks back at these places to see how far it has come, and moves on to the nearest place it has not described yet. So the plan is not a list of words kept somewhere inside the VLM. It is a set of pointers into the image, and the VLM reads them again at every step, much like notes on a whiteboard.
 </p>
 </div><!--card-block-->
 </div><!--card-->
@@ -347,7 +350,7 @@ We opened up a VLM and traced how it does this. We find that the VLM <b>decides 
 <summary>Primer: what is activation patching?</summary>
 <div class="primer-body">
 <p>Activation patching is how we test what a piece of the VLM's work contains. Click through to see one patch.</p>
-<div class="stage"><svg id="pp-svg" viewBox="0 0 900 400" role="img" aria-label="Two runs of the VLM; a state saved from the source run is pasted into the target run at the same layer, and the target's answer changes"></svg></div>
+<div class="stage"><svg id="pp-svg" viewBox="0 0 900 400" role="img" aria-label="Two runs of the VLM; a state saved from the source run is copied into the target run at the same layer, and the target's answer changes"></svg></div>
 <div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
 <div class="say" aria-live="polite"></div>
 
@@ -1316,7 +1319,7 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     '<b>3. Scores.</b> The head compares the query with each key: it multiplies them number by number and adds it all up (a <b>dot product</b>). A good match gives a big score, and <span class="tok">cat</span> scores highest. The values wait. (All numbers here are a cartoon.)',
     '<b>4. Softmax.</b> The scores are turned into shares that add up to 100%. This step is called <b>softmax</b>, and it lets the biggest score take most of the share. <span class="tok">cat</span> now gets ' + PCT[1] + '% of the attention.',
     '<b>5. Weighted sum.</b> Now the values come in. Each value is multiplied by its word\'s share: ' + PCT[1] + '% of <span class="tok">cat</span>\'s value, ' + PCT[2] + '% of <span class="tok">sat</span>\'s, and so on. They are all added up (Σ), and the sum is added to the stream of <span class="tok">it</span>.',
-    'Now the stream of <span class="tok">it</span> knows that it means the cat. In short: the <b>query</b> is what a word is looking for, the <b>key</b> is how a word can be found, softmax decides <b>how much</b> to take from each word, and the <b>value</b> is what gets taken. In our puzzle, the word <span class="tok">star</span> asks <i>"where is a star?"</i>, the keys of the picture tokens say which shape each one holds, and the values carry where it is.'
+    'Now the stream of <span class="tok">it</span> knows that it means the cat. In short: the <b>query</b> is what a word is looking for, the <b>key</b> is how a word can be found, softmax decides <b>how much</b> to take from each word, and the <b>value</b> is what gets taken. In our puzzle, the query at the shape token <span class="tok">star</span> asks <i>"where is a star?"</i>, the keys of the image tokens say which shape each one holds, and the values carry where it is.'
   ];
   makeStepper(document.getElementById("primer-attention"), FRAMES, function (n) {
     mv.clear();
@@ -1526,9 +1529,9 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
   var FRAMES = [
     'A VLM gets a picture and a question. But the language model inside it only reads <b>tokens</b>. So first, the picture has to become tokens too.',
     'A part called the <b>vision encoder</b> cuts the picture into a grid of small squares. In our VLM, each square is 32 by 32 pixels.',
-    'Each square becomes one <b>picture token</b>: a list of numbers that describes what is in that square. The squares are laid out in a row, in reading order.',
-    'The picture tokens go into the same row as the words. Two special tokens mark where the picture starts and ends, so the model knows which tokens are picture and which are text. Then come the words of the question.',
-    'From here on it is the same language model as before. It reads every token in the row, picture or word, through its 36 blocks, and writes the answer one token at a time. Each new token, here <span class="tok">T</span>, is added to the end of the row, and the model runs again for the next one. So attention heads can look back at words and at picture squares alike.'
+    'Each square becomes one <b>image token</b>: a list of numbers that describes what is in that square. The squares are laid out in a row, in reading order.',
+    'The image tokens go into the same row as the words. Two special tokens mark where the image starts and ends, so the model knows which tokens are image and which are text. Then come the words of the question.',
+    'From here on it is the same language model as before. It reads every token in the row, image or word, through its 36 blocks, and writes the answer one token at a time. Each new token, here <span class="tok">T</span>, is added to the end of the row, and the model runs again for the next one. So attention heads can look back at words and at image tokens alike.'
   ];
   makeStepper(document.getElementById("primer-vlm"), FRAMES, function (n) {
     mv.clear();
@@ -1583,8 +1586,8 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     svg.appendChild(g.bubble); svg.appendChild(g.letter);
     return g;
   }
-  var S = grid(70, ["Source run", C.src[1]], [["star", "G"], ["circle", "C"], ["plus", "Z"], ["heart", "D"]], ["…the", "heart?", "Answer", ":"]);
-  var T = grid(560, ["Target run", C.tgt[1]], [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]], ["…the", "star?", "Answer", ":"]);
+  var S = grid(70, ["Source run", C.src[1]], [["star", "G"], ["circle", "C"], ["plus", "Z"], ["heart", "D"]], ["…the", "heart", "Answer", ":"]);
+  var T = grid(560, ["Target run", C.tgt[1]], [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]], ["…the", "star", "Answer", ":"]);
   svg.appendChild(svgEl("text", { x: 58, y: cellY(0) + CH / 2, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: P_GRAY, "font-family": PF }, "layer 1"));
   svg.appendChild(svgEl("text", { x: 58, y: cellY(ROWS - 1) + CH / 2, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: P_GRAY, "font-family": PF }, "layer 36"));
   svg.appendChild(svgEl("text", { x: 450, y: BOT + 40, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: P_GRAY, "font-family": PF }, "each box is one activation: one token at one layer"));
@@ -1625,10 +1628,10 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
   var FRAMES = [
     '<b>The source run.</b> We run the VLM on the first puzzle, which asks for the heart. Each box is one <b>activation</b>: the state of one token at one layer. The VLM computes them one token at a time: the first token from layer 1 up to layer 36, then the next token, and so on. The source answers <span class="tok">D</span>.',
     '<b>The target run.</b> Separately, we run the VLM on the second puzzle, which asks for the star, with no changes. The target answers <span class="tok">T</span>.',
-    '<b>Pick one activation.</b> We choose one activation in the source run: here, the word <span class="tok">heart?</span> at one of the middle layers.',
-    '<b>Copy and replace.</b> We run the target again, but at that same word and layer we throw away its own activation and put the source\'s in its place. Everything below it, and everything before it, stays exactly as it was.',
-    '<b>Run the rest.</b> The target keeps running, token by token. Everything it computes after the pasted activation is built on it, so it changes too (orange): the higher layers of that word, and the higher layers of every word after it. The lower layers of later words only read lower layers, so they stay the same. The answer changes from <span class="tok">T</span> to <span class="tok">K</span>.',
-    'That is <b>activation patching</b>. Only one activation was swapped, so the change in the answer must come from what that one activation carried. Here, <span class="tok">K</span> is the letter in the target\'s own panel 4, where the source\'s heart was. So the pasted activation carried a place, <i>"look in panel 4"</i>. By choosing which activation to swap (which word, which layer, even which single attention head), we can find where each piece of information lives.'
+    '<b>Pick one activation.</b> We choose one activation in the source run: here, the shape token <span class="tok">heart</span> at one of the middle layers.',
+    '<b>Copy and replace.</b> We run the target again, but at the same token and layer we throw away its own activation and put the source\'s in its place. This is the <b>patch</b>. Everything below it, and everything before it, stays exactly as it was.',
+    '<b>Run the rest.</b> The target keeps running, token by token. Everything it computes after the patched activation is built on it, so it changes too (orange): the higher layers of that token, and the higher layers of every token after it. The lower layers of later tokens only read lower layers, so they stay the same. The answer changes from <span class="tok">T</span> to <span class="tok">K</span>.',
+    'That is <b>activation patching</b>. Only one activation was patched, so the change in the answer must come from what that one activation carried. Here, <span class="tok">K</span> is the letter in the target\'s own panel 4, where the source\'s heart was. So the patched activation carried a pointer, <i>"look in panel 4"</i>. By choosing which activation to patch (which token, which layer, even which single attention head), we can find where each piece of information lives.'
   ];
   makeStepper(document.getElementById("primer-patching"), FRAMES, function (n) {
     mv.clear();
