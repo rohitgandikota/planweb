@@ -110,8 +110,16 @@ figcaption { font-size: 13px; line-height: 1.5; text-align: left; max-width: 800
 #plan .pv-barlabels { display: flex; gap: 2px; overflow: hidden; }
 #plan .pv-barlabels span { flex: 1 0 13px; font: 500 9.5px 'JetBrains Mono', Menlo, monospace; writing-mode: vertical-rl; transform: rotate(180deg); height: 74px; overflow: hidden; white-space: pre; color: #555; text-align: right; }
 #pv-map { width: 100%; max-width: 330px; image-rendering: pixelated; cursor: crosshair; border: 1px solid #ccc; display: block; }
-#plan .pv-maprow { display: flex; gap: 6px; align-items: stretch; }
-#plan .pv-maprow .pv-ax { font-size: 11px; color: var(--muted); writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; }
+#plan .pv-mapgrid { display: grid; grid-template-columns: auto 16px minmax(0, 330px); column-gap: 4px; justify-content: start; }
+#plan .pv-mapgrid .pv-ax { font-size: 12.5px; color: var(--muted); text-align: center; }
+#plan .pv-mapgrid .pv-axy { grid-column: 1; grid-row: 1; writing-mode: vertical-rl; transform: rotate(180deg); }
+#plan .pv-mapgrid .pv-axx { grid-column: 3; grid-row: 3; }
+#plan .pv-ticks { position: relative; font: 500 10px 'JetBrains Mono', Menlo, monospace; color: var(--muted); }
+#plan .pv-ticksy { grid-column: 2; grid-row: 1; }
+#plan .pv-ticksy span { position: absolute; right: 0; transform: translateY(-50%); }
+#plan .pv-ticksx { grid-column: 3; grid-row: 2; height: 17px; }
+#plan .pv-ticksx span { position: absolute; top: 3px; transform: translateX(-50%); }
+#pv-map { grid-column: 3; grid-row: 1; }
 #plan .pv-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 10px 0 14px; }
 @media (max-width: 700px) { #plan .pv-pair { grid-template-columns: minmax(0, 1fr); } }
 #plan .pv-patches { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
@@ -291,8 +299,14 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
     <div class="pv-barlabels" id="pv-barlabels"></div>
   </div>
   <div class="pv-card">
-    <h3>All 1,152 heads of the model</h3>
-    <div class="pv-maprow"><span class="pv-ax">layers, from 0 at the top to 35 at the bottom</span><canvas id="pv-map" width="32" height="36"></canvas></div>
+    <h3>Click on any cell</h3>
+    <div class="pv-mapgrid">
+      <span class="pv-ax pv-axy">layers</span>
+      <div class="pv-ticks pv-ticksy" id="pv-ty"></div>
+      <canvas id="pv-map" width="32" height="36"></canvas>
+      <div class="pv-ticks pv-ticksx" id="pv-tx"></div>
+      <span class="pv-ax pv-axx">heads</span>
+    </div>
     <p class="pv-note" id="pv-mapnote" style="margin: 8px 0 0"></p>
   </div>
 </div>
@@ -897,6 +911,8 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
       $('bars').innerHTML = bars; $('barlabels').innerHTML = labels;
       drawMap();
     }
+    function ticks(n, side) { var t = ''; for (var k = 0; k < n; k += 5) t += '<span style="' + side + ':' + (100 * (k + 0.5) / n).toFixed(2) + '%">' + k + '</span>'; return t; }
+    $('ty').innerHTML = ticks(NL, 'top'); $('tx').innerHTML = ticks(NH, 'left');   // layer and head numbers along the map
     function drawMap() {
       var c = $('map'), ctx = c.getContext('2d'), out = ctx.createImageData(NH, NL), a = A[state.tok], member = {};
       SETS[state.set].forEach(function (h) { member[idx(h)] = 1; });
@@ -906,7 +922,7 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
       }
       if (state.head) { var j = idx(state.head); out.data[4 * j] = 213; out.data[4 * j + 1] = 94; out.data[4 * j + 2] = 0; }
       ctx.putImageData(out, 0, 0);
-      $('mapnote').textContent = 'One square is one head, and one row is one layer. A square is dark when that head, at the ' + state.tok + ' token, looks at panel ' + (askPanel + 1) + ', the panel the question asks about. The colored squares are the group picked on the left, and the orange square is the head being shown. Click any square to see that head.';
+      $('mapnote').textContent = 'One cell is one head. A cell is dark when that head, at the ' + state.tok + ' token, looks at panel ' + (askPanel + 1) + ', the panel the question asks about. The colored cells are the group picked on the left, and the orange cell is the head being shown.';
     }
     $('map').addEventListener('click', function (e) {
       var r = e.target.getBoundingClientRect(), head = Math.min(NH - 1, Math.floor((e.clientX - r.left) / r.width * NH)), layer = Math.min(NL - 1, Math.floor((e.clientY - r.top) / r.height * NL));
