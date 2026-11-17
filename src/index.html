@@ -57,18 +57,75 @@ a { color: var(--rose-dark); }
 .outcomes .L { font-family: 'JetBrains Mono', Menlo, monospace; font-size: 1.2rem; display: block; color: var(--rose-dark); font-weight: 700; }
 figcaption { font-size: 13px; line-height: 1.5; text-align: left; max-width: 800px; margin: 8px auto 0; }
 
-/* Interactive plan */
-#plan { max-width: 900px; margin: 10px auto 0; }
-#plan .stage, #patch .stage { background: #fff; border: 1px solid #e6d0d8; border-radius: 8px; overflow-x: auto; }
-#plan svg, #patch svg { display: block; width: 100%; min-width: 640px; height: auto; }
-#plan .controls, #patch .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 12px 0 6px; }
-#plan button { font: 600 14px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); background: #fff; color: var(--rose-dark); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
-#plan button.step { padding: 4px 11px; }
-#plan button[aria-current="step"] { background: var(--rose-dark); color: #fff; }
-#plan button:disabled { opacity: 0.35; cursor: default; }
+/* Interactive plan: recorded runs of the model, drawn step by step. Every name starts with pv-. */
+#plan { --lang: #7A5195; --line: #e6d0d8; max-width: 960px; margin: 10px auto 0; text-align: left; }
+#plan .pv-mono { font-family: 'JetBrains Mono', Menlo, monospace; }
+#plan .pv-note { font-size: 13px; color: var(--muted); }
+#plan .pv-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 14px; min-width: 0; }
+#plan .pv-card h3 { margin: 0 0 8px; font-size: 0.95rem; font-weight: 700; color: var(--rose-dark); }
+#plan .pv-strip { position: relative; border: 1px solid #999; line-height: 0; }
+#plan .pv-strip img { width: 100%; display: block; }
+#plan .pv-strip canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
+#plan .pv-ask { margin: 8px 0 2px; font-size: 14px; line-height: 1.5; }
+#plan .pv-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+#plan button { font: 600 13px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); background: #fff; color: var(--rose-dark); border-radius: 999px; padding: 4px 13px; cursor: pointer; }
+#plan button[aria-pressed="true"] { background: var(--rose-dark); color: #fff; }
 #plan button:focus-visible { outline: 2px solid var(--bind); outline-offset: 2px; }
-#plan .say, #patch .say { min-height: 6.5em; max-width: 800px; margin: 4px auto 0; font-size: 15px; line-height: 1.55; }
-#plan .say b.k { color: var(--kc); }
+#plan .pv-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 14px; }
+#plan .pv-scroll { overflow-x: auto; }
+#plan .pv-scene { position: relative; min-width: 600px; max-width: 900px; margin: 0 auto; }
+#plan .pv-scene .pv-strip { width: 66.667%; margin: 0 auto; }
+#pv-fig { display: block; width: 100%; height: auto; margin-top: -1px; }
+#pv-fig .pv-in { animation: pv-fadein .5s ease both; }
+@keyframes pv-fadein { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #pv-fig .pv-in { animation: none; } }
+#plan .pv-question { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; font: 500 12.5px/1.5 'JetBrains Mono', Menlo, monospace; margin: 6px auto 12px; max-width: 820px; }
+#plan .pv-question .pv-note { font-family: 'Open Sans', sans-serif; margin-right: 4px; }
+#plan .pv-tok { border: 1px solid #b9b9b9; border-radius: 4px; background: #f7f7f7; padding: 1px 6px; white-space: pre; }
+#plan .pv-tokS { background: #dcecf6; border-color: var(--bind); font-weight: 700; }
+#plan .pv-tokC { background: var(--tint); border-color: var(--rose-dark); font-weight: 700; }
+#plan .pv-tokG { background: #fff; border-color: var(--rose-dark); color: var(--rose-dark); font-weight: 700; animation: pv-fadein .5s ease both; }
+#plan #pv-ans { display: contents; }
+#plan .pv-steps { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+#plan .pv-steps button { border-color: var(--c); color: var(--c); }
+#plan .pv-steps button[aria-pressed="true"] { background: var(--c); color: #fff; }
+#plan .pv-modes { display: inline-flex; }
+#plan .pv-modes button { border-radius: 0; margin-left: -1px; padding: 5px 16px; }
+#plan .pv-modes button:first-child { border-radius: 999px 0 0 999px; margin-left: 0; }
+#plan .pv-modes button:last-child { border-radius: 0 999px 999px 0; }
+#plan .pv-say { min-height: 4.8em; font-size: 15px; line-height: 1.55; margin: 6px auto 0; max-width: 820px; text-align: center; }
+#plan .pv-key { text-align: center; margin: 6px 0 0; line-height: 1.9; }
+#plan .pv-key svg { vertical-align: middle; }
+#plan details.primer { text-align: left; }
+#plan .pv-heads { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { #plan .pv-heads { grid-template-columns: minmax(0, 1fr); } }
+#plan .pv-tabs, #plan .pv-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+#plan .pv-tabs button { border-color: var(--c); color: var(--c); }
+#plan .pv-tabs button[aria-pressed="true"] { background: var(--c); color: #fff; }
+#plan .pv-chips button { font: 500 11.5px 'JetBrains Mono', Menlo, monospace; padding: 2px 7px; border-color: var(--c); color: var(--c); }
+#plan .pv-chips button[aria-pressed="true"] { background: var(--c); color: #fff; }
+#plan .pv-info { font-size: 13.5px; line-height: 1.5; min-height: 3.2em; margin: 8px 0 0; }
+#plan .pv-bars { display: flex; align-items: flex-end; gap: 2px; height: 120px; margin-top: 10px; border-bottom: 1px solid #ccc; overflow-x: auto; }
+#plan .pv-bars div { flex: 1 0 13px; background: var(--c); min-height: 1px; border-radius: 2px 2px 0 0; }
+#plan .pv-barlabels { display: flex; gap: 2px; overflow: hidden; }
+#plan .pv-barlabels span { flex: 1 0 13px; font: 500 9.5px 'JetBrains Mono', Menlo, monospace; writing-mode: vertical-rl; transform: rotate(180deg); height: 74px; overflow: hidden; white-space: pre; color: #555; text-align: right; }
+#pv-map { width: 100%; max-width: 330px; image-rendering: pixelated; cursor: crosshair; border: 1px solid #ccc; display: block; }
+#plan .pv-maprow { display: flex; gap: 6px; align-items: stretch; }
+#plan .pv-maprow .pv-ax { font-size: 11px; color: var(--muted); writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; }
+#plan .pv-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 10px 0 14px; }
+@media (max-width: 700px) { #plan .pv-pair { grid-template-columns: minmax(0, 1fr); } }
+#plan .pv-patches { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+#plan .pv-patch { border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 6px; padding: 10px 12px; }
+#plan .pv-patch p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.5; }
+#plan .pv-opts { display: flex; flex-wrap: wrap; gap: 5px; }
+#plan .pv-opts button { font: 600 14px 'JetBrains Mono', Menlo, monospace; min-width: 36px; }
+#plan .pv-opts button.pv-right { background: var(--gaze); border-color: var(--gaze); color: #fff; }
+#plan .pv-opts button.pv-wrong { background: #eee; border-color: #bbb; color: #888; text-decoration: line-through; }
+#plan .pv-out { font-size: 13px; line-height: 1.5; margin-top: 8px; min-height: 2.6em; }
+#patch .stage { background: #fff; border: 1px solid #e6d0d8; border-radius: 8px; overflow-x: auto; }
+#patch svg { display: block; width: 100%; min-width: 640px; height: auto; }
+#patch .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 12px 0 6px; }
+#patch .say { min-height: 6.5em; max-width: 800px; margin: 4px auto 0; font-size: 15px; line-height: 1.55; }
 #patch { max-width: 820px; margin: 10px auto 24px; }
 #patch svg { min-width: 520px; }
 #patch input[type=range] { width: min(420px, 100%); accent-color: var(--rose-dark); }
@@ -92,9 +149,6 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 .mlp-box { transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: no-preference) { .mlp-box.pulse { animation: mlp-pulse 0.9s ease-in-out infinite; } }
 @keyframes mlp-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
-#plan .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; font-size: 13px; color: var(--muted); margin-top: 6px; }
-#plan .legend span::before { content: ""; display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: middle; background: var(--c); }
-@media (prefers-reduced-motion: no-preference) { #plan .fx { transition: opacity .35s ease; } }
 </style>
 </head>
 <body class="nd-docs">
@@ -119,7 +173,7 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 <div class="row justify-content-center text-center">
 
 <p>
-<a href="#" class="d-inline-block p-3 align-top" target="_blank"><img height="100" width="78" src="images/paper-thumb.png" style="border:1px solid; margin: 0 38px;" alt="Paper thumbnail" data-nothumb=""><br>ArXiv<br>Preprint</a>
+<a href="https://arxiv.org/abs/2611.21600" class="d-inline-block p-3 align-top" target="_blank"><img height="100" width="78" src="images/paper-thumb.png" style="border:1px solid; margin: 0 38px;" alt="Paper thumbnail" data-nothumb=""><br>ArXiv<br>Preprint</a>
 <a href="https://github.com/rohitgandikota/vlm-planning" class="d-inline-block p-3 align-top" target="_blank"><img height="100" width="78" src="images/code-thumb.png" style="border:1px solid; margin: 0 38px;" alt="Github code thumbnail" data-nothumb=""><br>Source Code<br>Github</a>
 </p>
 
@@ -197,19 +251,62 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <h2>What is the plan?</h2>
 <p>Here is the answer in one picture. Click through it one step at a time. In the sections after it, we explain each step and how we found it.</p>
 <figure id="plan" aria-label="Interactive walk-through of the plan">
-  <div class="stage"><svg id="plan-svg" viewBox="0 0 1100 460" role="img" aria-label="A grid of activations, picture tokens, question tokens, and answer tokens across, layers up, with the boxes and arcs for each step of the plan"></svg></div>
-  <div class="controls">
-    <button id="plan-prev" type="button">Back</button>
-    <span id="plan-steps"></span>
-    <button id="plan-next" type="button">Next</button>
+<div class="pv-card">
+  <div class="pv-picker"><span id="pv-modes" class="pv-modes"></span></div>
+  <div class="pv-picker"><span id="pv-lead"></span> <span id="pv-asks"></span></div>
+  <div class="pv-scroll"><div class="pv-scene">
+    <div class="pv-strip"><img id="pv-pic" alt="A row of panels, each with a shape and a letter"><canvas id="pv-heat"></canvas></div>
+    <svg id="pv-fig" viewBox="0 0 900 452" role="img" aria-label="The tokens that matter, each drawn as a column of 36 layers. Dots mark the attention heads at their layers, curves show where they look in the picture, and arrows show which token they read."></svg>
+  </div></div>
+  <p class="pv-question" id="pv-question"></p>
+  <div class="pv-controls" style="justify-content:center">
+    <button id="pv-play" type="button" aria-pressed="false">Play</button>
+    <span id="pv-steps" class="pv-steps"></span>
   </div>
-  <div class="legend">
-    <span style="--c: var(--bind)">binding heads</span>
-    <span style="--c: var(--relay)">relay heads</span>
-    <span style="--c: var(--gaze)">gaze heads</span>
-    <span style="--c: var(--prog)">progress and select</span>
+  <p class="pv-say" id="pv-say" aria-live="polite"></p>
+  <p class="pv-note pv-key">
+    <svg width="36" height="15" viewBox="-18 -7.5 36 15" aria-hidden="true"><rect x="-17" y="-6.5" width="34" height="13" rx="2.5" fill="#fff" stroke="#222" stroke-width="1.2"/><rect x="-14.5" y="-4" width="6.5" height="8" rx="1" fill="#e2e2e2"/><rect x="-7" y="-4" width="6.5" height="8" rx="1" fill="#e2e2e2"/><rect x="0.5" y="-4" width="6.5" height="8" rx="1" fill="#222"/><rect x="8" y="-4" width="6.5" height="8" rx="1" fill="#e2e2e2"/></svg> a pointer: which panel
+    &nbsp;&nbsp; <svg width="36" height="15" viewBox="-18 -7.5 36 15" aria-hidden="true"><defs><pattern id="pv-done" width="2.4" height="2.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.4" height="2.4" fill="#222"/><rect width="0.9" height="2.4" fill="#fff"/></pattern></defs><rect x="-17" y="-6.5" width="34" height="13" rx="2.5" fill="#fff" stroke="#222" stroke-width="1.2"/><rect x="-14.5" y="-4" width="6.5" height="8" rx="1" fill="url(#pv-done)"/><rect x="-7" y="-4" width="6.5" height="8" rx="1" fill="url(#pv-done)"/><rect x="0.5" y="-4" width="6.5" height="8" rx="1" fill="#e2e2e2"/><rect x="8" y="-4" width="6.5" height="8" rx="1" fill="#e2e2e2"/></svg> progress: done up to here
+    &nbsp;&nbsp; <svg width="23" height="23" viewBox="-11.5 -11.5 23 23" aria-hidden="true"><circle r="10" fill="#fff" stroke="#009E73" stroke-width="2"/><text y="4.6" text-anchor="middle" font-family="JetBrains Mono, Menlo, monospace" font-size="13" font-weight="700">E</text></svg> the letter read there
+    &nbsp;&nbsp; Each dot is one attention head at its layer. Click a dot to see where it looks.</p>
+</div>
+<figcaption>The dots, curves, arrows, and percentages are read from recorded runs of Qwen3-VL-8B. The small pictures that slide between the tokens are our drawing of what each step carries, as the patching experiments below show.</figcaption>
+
+<details class="primer">
+<summary>Look at any head</summary>
+<div class="primer-body">
+<p class="pv-note" style="margin:0 0 8px">Pick a group, then a head. The picture shows where that head looks, and the bars show which text tokens it reads.</p>
+<div class="pv-heads">
+  <div class="pv-card">
+    <div class="pv-tabs" id="pv-tabs"></div>
+    <div class="pv-controls" style="margin: 0 0 8px">
+      <span class="pv-note">Read at the</span>
+      <button type="button" data-tok="shape" aria-pressed="true">shape token</button>
+      <button type="button" data-tok="colon" aria-pressed="false">colon token</button>
+    </div>
+    <div class="pv-chips" id="pv-chips"></div>
+    <div class="pv-strip"><img id="pv-img2" alt=""><canvas id="pv-heat2"></canvas></div>
+    <p class="pv-info" id="pv-info" aria-live="polite"></p>
+    <div class="pv-bars" id="pv-bars"></div>
+    <div class="pv-barlabels" id="pv-barlabels"></div>
   </div>
-  <div class="say" id="plan-say" aria-live="polite"></div>
+  <div class="pv-card">
+    <h3>All 1,152 heads of the model</h3>
+    <div class="pv-maprow"><span class="pv-ax">layers, from 0 at the top to 35 at the bottom</span><canvas id="pv-map" width="32" height="36"></canvas></div>
+    <p class="pv-note" id="pv-mapnote" style="margin: 8px 0 0"></p>
+  </div>
+</div>
+</div>
+</details>
+
+<details class="primer">
+<summary>Test the plan: guess the letter before you look</summary>
+<div class="primer-body">
+<p class="pv-note" style="margin:0 0 4px">A patch copies one internal state from the source run into the target run. The letter the target then writes tells us what that state carried.</p>
+<div class="pv-pair" id="pv-pair"></div>
+<div class="pv-patches" id="pv-patches"></div>
+</div>
+</details>
 </figure>
 
 <h2>Why do we use a strip of panels instead of photos?</h2>
@@ -324,7 +421,7 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <h3 class="card-header">bibliography</h3>
 <div class="card-block">
 <p style="text-indent: -3em; margin-left: 3em;" class="card-text clickselect">
-Rohit Gandikota, Arnab Sen Sharma, Adam Belfki, David Bau. "<em>How VLMs Plan What's Next.</em>" arXiv preprint, 2026.
+Rohit Gandikota, Arnab Sen Sharma, Adam Belfki, David Bau. "<em>How VLMs Plan What's Next.</em>" arXiv preprint arXiv:2611.21600, 2026.
 </p>
 </div>
 <h3 class="card-header">bibtex</h3>
@@ -333,7 +430,7 @@ Rohit Gandikota, Arnab Sen Sharma, Adam Belfki, David Bau. "<em>How VLMs Plan Wh
 @article{gandikota2026plan,
   title={How VLMs Plan What's Next},
   author={Gandikota, Rohit and Sen Sharma, Arnab and Belfki, Adam and Bau, David},
-  journal={arXiv preprint},
+  journal={arXiv preprint arXiv:2611.21600},
   year={2026}
 }
 </pre>
@@ -385,180 +482,458 @@ document.querySelectorAll("[data-strip]").forEach(function (el) {
   });
 });
 
-/* Interactive plan, drawn like the patching primer: a grid of activations, tokens across and layers up.
-   Picture tokens (one per panel) come first, then the question, then each answer token as it is written. */
-(function () {
-  var svg = document.getElementById("plan-svg"); if (!svg) return;
-  var F = "Open Sans, sans-serif", M = "JetBrains Mono, Menlo, monospace";
-  var C = { bind: "#0072B2", relay: "#8C3B5A", gaze: "#009E73", prog: "#D55E00" };
-  var LIGHT = { bind: "#d3e5f2", relay: "#ecd3dd", gaze: "#cdeee3", prog: "#f8dccb" };
-  var PANELS = [["heart", "E"], ["diamond", "M"], ["heart", "U"], ["diamond", "V"], ["heart", "P"], ["heart", "A"]];
-  var TEXT = ["each", "heart", "?", "Answer", ":"], OUT = ["E", ",", "U", ",", "P", ",", "A", "end"];
-  var NP = PANELS.length, NQ = TEXT.length, NCOL = NP + NQ + OUT.length;
-  var X0 = 118, CWD = 51, CW = 45, ROWS = 6, CH = 22, G = 4, GBOT = 330;
-  var BANDS = ["1-6", "7-12", "13-18", "19-24", "25-30", "31-36"];
-  function colX(c) { return X0 + c * CWD; }
-  function colMid(c) { return colX(c) + CW / 2; }
-  function rowY(r) { return GBOT - (r + 1) * (CH + G); }      // row 0 = layers 1-6, at the bottom
-  var HEART = NP + 1, COLON = NP + NQ - 1;
-  function ans(k) { return NP + NQ + 2 * k; }
-  function comma(k) { return NP + NQ + 2 * k + 1; }
-  function el(tag, a, t) { return svgEl(tag, a, t); }
+/* Interactive plan. Recorded runs of Qwen3-VL-8B (the files in plan/), drawn step by step: each token that matters is a
+   column of 36 layers, each dot is one attention head, curves go to the picture and arrows go between tokens. */
+(async function () {
+  var $ = function (id) { return document.getElementById('pv-' + id); };
+  if (!$('fig')) return;
+  function bytes(b64) { var s = atob(b64), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+  function pct(v) { return Math.round(100 * v) + '%'; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function show(t) { return t.replace(/\n/g, '↵'); }
 
-  // arrowheads
-  var defs = el("defs", {});
-  Object.keys(C).forEach(function (k) {
-    var m = el("marker", { id: "pl-" + k, viewBox: "0 0 10 10", refX: 10, refY: 5, markerWidth: 9, markerHeight: 9, markerUnits: "userSpaceOnUse", orient: "auto" });
-    m.appendChild(el("path", { d: "M0,0 L10,5 L0,10 z", fill: C[k] })); defs.appendChild(m);
-  });
-  svg.appendChild(defs);
+  // ------------------------------------------------------------------ the plan, step by step
+  // One figure for two cases. A case is a "scene": columns (tokens), groups of heads, and the
+  // pictures that move at each step. Both scenes are built from recorded runs of the model.
+  var LH = 9.5, YB = 392, NLAY = 36, YR = ly(21), YT = YB - NLAY * LH - 17;
+  function ly(l) { return YB - (l + 0.5) * LH; }
+  var BLUE = { color: '#0072B2', rgb: [0, 114, 178] }, ROSE = { color: '#8C3B5A', rgb: [140, 59, 90] }, GREEN = { color: '#009E73', rgb: [0, 158, 115] }, ORANGE = { color: '#D55E00', rgb: [213, 94, 0] };
+  var MODES = {
+    one: { label: 'One answer', lead: 'Ask for the letter inside the', asks: ['star', 'heart', 'circle', 'square'], first: 'circle',
+           picture: 'plan/picture.png', file: function (a) { return 'plan/one_' + a + '.json'; }, PX0: 150, PW: 600, cols: [310, 610],
+           steps: [['1. Bind', BLUE.color], ['2. Relay', ROSE.color], ['3. Gaze', GREEN.color]], build: buildOne },
+    list: { label: 'A list of answers', lead: 'Ask for the letter inside each', asks: ['star', 'heart'], first: 'star',
+            picture: 'plan/list_picture.png', file: function (a) { return 'plan/list_' + a + '.json'; }, PX0: 90, PW: 720, cols: [185, 395, 605, 795],
+            steps: [['1. Bind', BLUE.color], ['2. Relay', ROSE.color], ['3. Gaze', GREEN.color], ['4. Progress', ORANGE.color], ['5. Select', GREEN.color]], build: buildList }
+  };
+  var mode = 'one', M = MODES.one, scenes = {}, S = null, step = 0, part = 99, lastStep = 0, picked = null, animToken = 0, playing = false;
 
-  // row labels and the grid
-  svg.appendChild(el("text", { x: 20, y: rowY(ROWS - 1) - 12, "font-size": 12, "font-weight": 700, fill: "#6b6b6b", "font-family": F }, "layers"));
-  BANDS.forEach(function (b, r) { svg.appendChild(el("text", { x: X0 - 10, y: rowY(r) + CH / 2, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11.5, fill: "#6b6b6b", "font-family": F }, b)); });
-  var cells = [], cols = [];
-  for (var c = 0; c < NCOL; c++) {
-    var g = el("g", {}); cells.push([]);
-    for (var r = 0; r < ROWS; r++) {
-      var rect = el("rect", { x: colX(c), y: rowY(r), width: CW, height: CH, rx: 4, fill: "#efefef", stroke: "#dadada", "stroke-width": 1 });
-      g.appendChild(rect); cells[c].push(rect);
-    }
-    svg.appendChild(g); cols.push(g);
-  }
-  // labels under the columns: panel pictures, then words
-  var tints = [];
-  PANELS.forEach(function (p, i) {
-    var x = colX(i), t = el("rect", { x: x, y: GBOT + 6, width: CW, height: CW, fill: "#fff", stroke: "#222", "stroke-width": 1.3 });
-    svg.appendChild(t); tints.push(t);
-    var s = el("g", { transform: "translate(" + (x + 2) + "," + (GBOT + 8) + ") scale(0.41)" }); s.innerHTML = shapeSVG(p[0], p[1]); svg.appendChild(s);
-    svg.appendChild(el("text", { x: colMid(i), y: GBOT + CW + 18, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 10.5, fill: "#6b6b6b", "font-family": F }, "panel " + (i + 1)));
-  });
-  svg.appendChild(el("text", { x: (colX(0) + colX(NP - 1) + CW) / 2, y: GBOT + CW + 36, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "picture tokens"));
-  var labels = [];
-  TEXT.concat(OUT).forEach(function (t, i) {
-    var c = NP + i, out = i >= NQ;
-    var g = el("g", {});
-    g.appendChild(el("rect", { x: colX(c), y: GBOT + 10, width: CW, height: 26, rx: 5, fill: out ? "#F6D5DF" : "#f4f4f4", stroke: out ? "#8C3B5A" : "#ccc" }));
-    g.appendChild(el("text", { x: colMid(c), y: GBOT + 23, "text-anchor": "middle", "dominant-baseline": "central", "font-size": t.length > 4 ? 10.5 : 13, fill: out ? "#3A1D2A" : "#333", "font-family": M }, t));
-    svg.appendChild(g); labels.push(g);
-  });
-  svg.appendChild(el("text", { x: (colX(NP) + colX(NP + NQ - 1) + CW) / 2, y: GBOT + CW + 36, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "question"));
-  svg.appendChild(el("text", { x: (colX(NP + NQ) + colX(NCOL - 1) + CW) / 2, y: GBOT + CW + 36, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: "#6b6b6b", "font-family": F }, "answer, one token at a time"));
-
-  // bookmark: "done up to here", drawn on the picture columns
-  var mark = el("g", { opacity: 0 });
-  var markLine = el("line", { y1: rowY(ROWS - 1) - 2, y2: GBOT + CW + 48, stroke: C.prog, "stroke-width": 3, "stroke-dasharray": "6 4" });
-  var markText = el("text", { y: GBOT + CW + 62, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: C.prog, "font-family": F }, "done up to here");
-  mark.appendChild(markLine); mark.appendChild(markText); svg.appendChild(mark);
-  var arcLayer = el("g", {}); svg.appendChild(arcLayer);
-  var mv = makeMover(svg, "pl-glow"); mv.front();
-
-  // each step: answer tokens shown, tinted panels, lit cells [col, rows, kind], arcs [from col, to col, kind], bookmark
-  var STEPS = [
-    { name: "Task", out: 0, tint: [], lit: [], arcs: [], mark: null },
-    { name: "1 Binding", out: 0, tint: [0, 2, 4, 5], lit: [[HEART, [2, 3], "bind"]], arcs: [[HEART, 0, "bind"], [HEART, 2, "bind"], [HEART, 4, "bind"], [HEART, 5, "bind"]], mark: null },
-    { name: "2 Relay", out: 0, tint: [0, 2, 4, 5], lit: [[COLON, [3], "relay"]], arcs: [[COLON, HEART, "relay"]], mark: null },
-    { name: "3 Gaze", out: 1, tint: [0], lit: [[COLON, [3, 4, 5], "gaze"]], arcs: [[COLON, 0, "gaze"]], mark: null },
-    { name: "4 Progress", out: 2, tint: [0], lit: [[ans(0), [2, 3], "bind"], [comma(0), [3], "prog"]], arcs: [[ans(0), 0, "bind"]], mark: 0 },
-    { name: "5 Select", out: 3, tint: [2], lit: [[comma(0), [3, 4], "prog"]], arcs: [[comma(0), 2, "gaze"]], mark: 0 },
-    { name: "6 Repeat", out: 5, tint: [4], lit: [[ans(1), [2, 3], "bind"], [comma(1), [3, 4], "prog"]], arcs: [[ans(1), 2, "bind"], [comma(1), 4, "gaze"]], mark: 2 },
-    { name: "", out: 7, tint: [5], lit: [[ans(2), [2, 3], "bind"], [comma(2), [3, 4], "prog"]], arcs: [[ans(2), 4, "bind"], [comma(2), 5, "gaze"]], mark: 4 },
-    { name: "", out: 8, tint: [], lit: [[ans(3), [2, 3], "bind"], [ans(3), [3, 4], "prog"]], arcs: [[ans(3), 5, "bind"]], mark: 5 }
-  ];
-  var SAY = [
-    'We show the VLM a strip of six panels and ask <i>"What is the letter inside each heart?"</i> The right answer is <span class="tok">E, U, P, A</span>. Each box is one activation: one token at one band of layers, with layer 1 at the bottom. Each picture token stands for one panel. Click <b>Next</b> to see the plan.',
-    '<b class="k" style="--kc:' + C.bind + '">Binding.</b> While the VLM is still reading the question, at the word <span class="tok">heart</span>, 16 <b>binding heads</b> in layers 15 to 21 match the word against the picture tokens. They mark every panel that holds a heart. Nothing has been written yet.',
-    '<b class="k" style="--kc:' + C.relay + '">Relay.</b> The answer gets written a few tokens later, at the colon. 16 <b>relay heads</b> at the colon, in layers 19 to 23, reach back to <span class="tok">heart</span> and carry the marked panels over.',
-    '<b class="k" style="--kc:' + C.gaze + '">Gaze.</b> At the colon, 32 <b>gaze heads</b> in layers 19 to 34 follow the first mark back to the picture tokens and read what is in panel 1. The VLM writes <span class="tok">E</span>, and a new token is added to the end.',
-    '<b class="k" style="--kc:' + C.prog + '">Progress.</b> The VLM keeps no notes between words, so it works out its progress again from what it has written. At the written <span class="tok">E</span>, the binding heads link the letter back to panel 1. At layers 20 to 21, the comma after it holds a bookmark: <i>done up to panel 1</i>.',
-    '<b class="k" style="--kc:' + C.prog + '">Select.</b> At the comma, in layers 20 to 25, the VLM picks the nearest heart <i>after</i> the bookmark: panel 3. The gaze heads read it, and the VLM writes <span class="tok">U</span>.',
-    'The same two steps repeat. The binding heads link <span class="tok">U</span> to panel 3, the bookmark moves to <i>done up to panel 3</i>, and the VLM picks panel 5 and writes <span class="tok">P</span>.',
-    'Once more: <span class="tok">P</span> is linked to panel 5, the bookmark moves to panel 5, and the next heart is panel 6. The VLM writes <span class="tok">A</span>.',
-    'After <span class="tok">A</span>, the bookmark sits at panel 6, and no heart is left after it. The same step now tells the VLM to stop. The whole plan was rebuilt from the written letters at every step.'
-  ];
-
-  function arcPath(from, to) {
-    var x0 = colMid(from), x1 = colMid(to), top = rowY(ROWS - 1) - 4, h = 22 + Math.abs(x0 - x1) * 0.16;
-    return "M" + (x0 - 2) + "," + top + " Q" + (x0 + x1) / 2 + "," + (top - h) + " " + (x1 + 2) + "," + top;
-  }
-  function paintBase(n) {
-    var shown = NP + NQ + STEPS[n].out;
-    for (var c = 0; c < NCOL; c++) {
-      cols[c].setAttribute("opacity", c < shown ? 1 : 0);
-      cells[c].forEach(function (rc) { rc.setAttribute("fill", "#efefef"); rc.setAttribute("stroke", "#dadada"); rc.setAttribute("stroke-width", 1); });
-    }
-    labels.forEach(function (g, i) { g.setAttribute("opacity", NP + i < shown ? 1 : 0.12); });
-  }
-  function light(lit, strong) {
-    lit.forEach(function (l) { l[1].forEach(function (r) {
-      var rc = cells[l[0]][r];
-      rc.setAttribute("fill", strong ? C[l[2]] : LIGHT[l[2]]); rc.setAttribute("stroke", C[l[2]]); rc.setAttribute("stroke-width", strong ? 1.5 : 1);
-    }); });
-  }
-  var stepsBox = document.getElementById("plan-steps"), say = document.getElementById("plan-say");
-  var prev = document.getElementById("plan-prev"), next = document.getElementById("plan-next");
-  var REPEAT = 6, at = 0, timer = null;
-  var btns = STEPS.slice(0, REPEAT + 1).map(function (s, i) {
-    var b = document.createElement("button");
-    b.type = "button"; b.className = "step"; b.textContent = s.name;
-    b.addEventListener("click", function () { go(i); });
-    stepsBox.appendChild(b); return b;
-  });
-  function go(n) {
-    clearTimeout(timer);
-    n = Math.max(0, Math.min(REPEAT, n));
-    show(n);
-    if (n === REPEAT) (function tick() {
-      timer = setTimeout(function () { if (at < STEPS.length - 1) { show(at + 1); tick(); } }, 3000);
-    })();
-  }
-  function show(n) {
-    var prevOut = at === n - 1 ? STEPS[at].out : STEPS[n].out;
-    at = n; mv.clear();
-    var s = STEPS[n];
-    paintBase(n);
-    while (arcLayer.firstChild) arcLayer.removeChild(arcLayer.firstChild);
-    for (var j = 0; j < n; j++) {                                   // earlier steps stay, lighter
-      light(STEPS[j].lit, false);
-      STEPS[j].arcs.forEach(function (a) { arcLayer.appendChild(el("path", { d: arcPath(a[0], a[1]), fill: "none", stroke: C[a[2]], "stroke-width": 2, opacity: 0.2 })); });
-    }
-    light(s.lit, true);
-    var arcs = s.arcs.map(function (a) {
-      var p = el("path", { d: arcPath(a[0], a[1]), fill: "none", stroke: C[a[2]], "stroke-width": 2.5, "marker-end": "url(#pl-" + a[2] + ")" });
-      arcLayer.appendChild(p); return [p, a[2]];
+  function argmax(a) { var j = 0; for (var i = 1; i < a.length; i++) if (a[i] > a[j]) j = i; return j; }
+  function isLetter(token) { return /^[A-Z]$/.test(String(token).replace(/[^A-Za-z]/g, '')); }
+  function panelX(j) { return M.PX0 + M.PW * (j + 0.5) / S.np; }
+  function range(layers) { var k = Object.keys(layers).map(Number); return Math.min.apply(null, k) + ' to ' + Math.max.apply(null, k); }
+  function slice(bytesIn, offset, n, scale) { var out = new Float32Array(n); for (var i = 0; i < n; i++) out[i] = bytesIn[offset + i] * scale; return out; }
+  function finish(g, NI, np) {                  // sums and layers of one group
+    var nh = g.heads.length;
+    g.sum = new Float32Array(NI); g.heat.forEach(function (x) { for (var i = 0; i < NI; i++) g.sum[i] += x[i] / nh; });
+    g.mean = []; for (var j = 0; j < np; j++) g.mean.push(g.panel.reduce(function (a, v) { return a + v[j]; }, 0) / nh);
+    g.layers = {}; g.heads.forEach(function (hd, h) { (g.layers[hd[0]] = g.layers[hd[0]] || []).push(h); });
+    (g.reads || []).forEach(function (r) {
+      r.layers = Object.keys(g.layers).map(Number).filter(function (l) { return g.layers[l].reduce(function (a, h) { return a + r.on[h]; }, 0) >= 0.02; });
+      r.mean = r.on.reduce(function (a, v) { return a + v; }, 0) / nh;
     });
-    tints.forEach(function (t, i) { t.setAttribute("fill", s.tint.indexOf(i) >= 0 ? "#FBEAF0" : "#fff"); });
-    if (s.mark == null) mark.setAttribute("opacity", 0);
-    else {
-      var x = colX(s.mark) + CW + (CWD - CW) / 2;
-      markLine.setAttribute("x1", x); markLine.setAttribute("x2", x); markText.setAttribute("x", Math.max(x, 70));
-      mark.setAttribute("opacity", 1);
-    }
-    say.innerHTML = SAY[n];
-    var active = Math.min(n, REPEAT);
-    btns.forEach(function (b, i) { if (i === active) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
-    prev.disabled = n === 0; next.disabled = n >= REPEAT;
-    if (mv.reduce) return;
-    // information flows along each arc, from the token read into the token reading
-    arcs.forEach(function (a, i) { mv.along(a[0], C[a[1]], 150 + i * 120, 1100, 5, true); });
-    // a newly written token fills in from layer 1 up, like the patching runs
-    for (var c = NP + NQ + prevOut; c < NP + NQ + s.out; c++) (function (c, k) {
-      cells[c].forEach(function (rc, r) {
-        var final = rc.getAttribute("fill"); rc.setAttribute("fill", "#ffffff");
-        mv.at(1300 + k * 600 + r * 80, function () { rc.setAttribute("fill", final); });
-      });
-    })(c, c - (NP + NQ + prevOut));
-    mv.run();
+    return g;
   }
-  function back() { go(Math.min(at, REPEAT) - 1); }
-  function fwd() { if (at < REPEAT) go(at + 1); }
-  prev.addEventListener("click", back);
-  next.addEventListener("click", fwd);
-  document.getElementById("plan").addEventListener("keydown", function (e) {
-    if (e.key === "ArrowRight") fwd();
-    if (e.key === "ArrowLeft") back();
+
+  // the small pictures: a strip with marked panels (a pointer, or the progress, striped), and a letter
+  function strip(marks, done, x, y) {            // done: the last panel that is done, or -1
+    var n = S.np, w = n * 7.5 + 4, s = '<g transform="translate(' + x + ',' + y + ')"><g transform="scale(1.4)"><rect x="' + (-w / 2) + '" y="-6.5" width="' + w + '" height="13" rx="2.5" fill="#fff" stroke="#222" stroke-width="1.2"/>';
+    for (var k = 0; k < n; k++) s += '<rect x="' + (-w / 2 + 2.5 + k * 7.5) + '" y="-4" width="6.5" height="8" rx="1" fill="' + (k <= done ? 'url(#pv-done)' : marks.indexOf(k) >= 0 ? '#222' : '#e2e2e2') + '"/>';
+    return s + '</g></g>';
+  }
+  function letterBadge(letter, x, y) {
+    return '<g transform="translate(' + x + ',' + y + ')"><circle r="13" fill="#fff" stroke="#009E73" stroke-width="2.2"/><text y="5.5" text-anchor="middle" font-family="JetBrains Mono, Menlo, monospace" font-size="16" font-weight="700">' + esc(letter) + '</text></g>';
+  }
+  // the four ways a picture moves
+  function fromPicture(j, col) { var px = panelX(j), cx = M.cols[col]; return { d: 'M' + px + ',0 C' + px + ',120 ' + cx + ',' + (YR - 110) + ' ' + cx + ',' + YR, end: [cx, YR] }; }
+  function across(a, b) { return { d: 'M' + M.cols[a] + ',' + YR + ' L' + M.cols[b] + ',' + YR, end: [M.cols[b], YR] }; }
+  function toPicture(col, j) { var px = panelX(j) + 8, cx = M.cols[col]; return { d: 'M' + cx + ',' + YR + ' C' + cx + ',' + (YR - 110) + ' ' + px + ',120 ' + px + ',0', end: null }; }
+  function letterDown(j, col) { var px = panelX(j) + 8, cx = M.cols[col]; return { d: 'M' + px + ',0 C' + px + ',70 ' + cx + ',' + (YT - 40) + ' ' + cx + ',' + YT, end: [cx, YT] }; }
+  function mv(step, make, path, ms) { return { step: step, make: make, d: path.d, end: path.end, ms: ms }; }
+  // two pictures that meet at one token and become one: each arrives at its own spot, then they join
+  function arrive(step, make, d, ms) { return { step: step, make: make, d: d, end: null, ms: ms, temp: true }; }
+  function join(step, make, col) { return { step: step, make: make, d: 'M0,0', end: [M.cols[col], YR], join: true }; }
+
+  // the text the model reads, one box per token (the chat markers are left out); written tokens are added as they come
+  function tok(text, cls) { return '<span class="pv-tok' + (cls ? ' ' + cls : '') + '">' + esc(text.trim()) + '</span>'; }
+  function inputRow(t) {
+    var T = t.tokens, a = 0, b = 0, c = 0, i, s = '<span class="pv-note">Input tokens</span>';
+    T.forEach(function (x, k) { if (x.text === '<|vision_end|>') a = k + 1; if (x.text === '<|im_end|>') b = k; if (x.text === 'assistant') c = k + 2; });
+    for (i = a; i < b; i++) s += tok(T[i].text, T[i].position === t.names.shape ? 'pv-tokS' : '');
+    s += '<span class="pv-note">…</span>';
+    for (i = c; i < T.length && T[i].position <= t.names.colon; i++) s += tok(T[i].text, T[i].position === t.names.colon ? 'pv-tokC' : '');
+    return s + '<span id="pv-ans"></span>';
+  }
+  function written(n) {                          // rewrite the boxes only when a token is added, so they do not fade in again
+    var html = n < 0 ? '' : S.answer(n).map(function (a) { return tok(a, 'pv-tokG'); }).join(''), el = $('ans');
+    var old = el.dataset.html || '';
+    if (old === html) return;
+    if (old && html.indexOf(old) === 0) el.insertAdjacentHTML('beforeend', html.slice(old.length)); else el.innerHTML = html;   // only the new boxes fade in
+    el.dataset.html = html;
+  }
+
+  function buildOne(t) {
+    var NI = t.image.grid_h * t.image.grid_w, NT = t.tokens.length, shapeIndex = -1;
+    t.tokens.forEach(function (tok, i) { if (tok.position === t.names.shape) shapeIndex = i; });
+    S = { np: 4, NI: NI, image: t.image };
+    function grp(name, style, col, side, stepN, kind) {
+      var g = t.groups[name], nh = g.heads.length, s = t.steps.indexOf(col === 0 ? t.names.shape : t.names.colon), pic = bytes(g.picture), txt = bytes(g.text);
+      return finish({ name: name, style: style, col: col, side: side, step: stepN, kind: kind, heads: g.heads, at: col === 0 ? 'shape' : 'colon',
+        heat: g.heads.map(function (_, h) { return slice(pic, (s * nh + h) * NI, NI, g.peak[s][h] / 255); }),
+        panel: g.on_panel[s], share: g.on_image[s],
+        reads: kind === 'read' ? [{ from: 0, color: ROSE.color, tip: 'pv-tipR', dy: 0, on: g.heads.map(function (_, h) { return txt[(s * nh + h) * NT + shapeIndex] * g.peak[s][h] / 255; }) }] : null,
+        probe: g.panel_scores[s], top: g.top_tokens[s][0], topLetter: g.letters[s].top_letter }, NI, 4);
+    }
+    var B = grp('binding', BLUE, 0, -1, 1, 'look'), R = grp('relay', ROSE, 1, -1, 2, 'read'), G = grp('gaze', GREEN, 1, 1, 3, 'look');
+    var pb = argmax(B.probe), pr = argmax(R.probe), gj = argmax(G.mean), bj = argmax(B.mean), letter = isLetter(G.top) ? G.topLetter : '?', answer = t.answer.trim();
+    S.groups = [B, R, G];
+    S.labels = [[t.ask, 'the shape token'], [':', 'the colon token']];
+    S.question = inputRow(t);
+    S.answer = function (n) { return n >= 3 ? [answer] : []; };
+    S.moves = [mv(1, function (x, y) { return strip([pb], -1, x, y); }, fromPicture(pb, 0), 1200),
+               mv(2, function (x, y) { return strip([pr], -1, x, y); }, across(0, 1), 1100),
+               mv(3, function (x, y) { return strip([pr], -1, x, y); }, toPicture(1, gj), 950),
+               mv(3, function (x, y) { return letterBadge(letter, x, y); }, letterDown(gj, 1), 1100)];
+    S.say = ['Press Play, or step through the plan.',
+      '<b style="color:var(--bind)">Bind.</b> At the shape token, the ' + B.heads.length + ' binding heads in layers ' + range(B.layers) + ' look at the picture. They put ' + pct(B.mean[bj]) + ' of their attention on panel ' + (bj + 1) + '.',
+      '<b style="color:var(--relay)">Relay.</b> At the colon token, relay heads in layers ' + Math.min.apply(null, R.reads[0].layers) + ' to ' + Math.max.apply(null, R.reads[0].layers) + ' read the shape token and carry the pointer to where the answer is written.',
+      '<b style="color:var(--gaze)">Gaze.</b> At the colon token, the ' + G.heads.length + ' gaze heads in layers ' + range(G.layers) + ' look at the picture. They put ' + pct(G.mean[gj]) + ' of their attention on panel ' + (gj + 1) + ', and the model writes <b class="pv-mono">' + esc(answer) + '</b>.'];
+    return S;
+  }
+
+  function buildList(t) {
+    var NI = t.image.grid_h * t.image.grid_w, np = t.shapes.length;
+    S = { np: np, NI: NI, image: t.image };
+    function grp(key, name, style, col, side, stepN, kind, reads, at) {
+      var g = t.groups[key], pic = bytes(g.picture);
+      return finish({ name: name, style: style, col: col, side: side, step: stepN, kind: kind, heads: g.heads, at: at,
+        heat: g.heads.map(function (_, h) { return slice(pic, h * NI, NI, g.peak[h] / 255); }),
+        panel: g.on_panel, share: g.on_image,
+        reads: (reads || []).map(function (r) { return { from: r[0], color: r[2].color, tip: r[3], dy: 0, step: r[4], part: r[5], on: g.on_token.map(function (o) { return o[r[1]] || 0; }) }; }),
+        top: g.top_tokens[0], topLetter: g.top_letter }, NI, np);
+    }
+    var B = grp('binding at shape', 'binding', BLUE, 0, -1, 1, 'look', null, 'shape'), R = grp('relay at colon', 'relay', ROSE, 1, -1, 2, 'read', [[0, 'shape', ROSE, 'pv-tipR']], 'colon'),
+        G = grp('gaze at colon', 'gaze', GREEN, 1, 1, 3, 'look', null, 'colon'), K = grp('binding at answer', 'binding', ORANGE, 2, -1, 4, 'look', null, 'answer'),
+        C = grp('relay at comma', 'relay', ORANGE, 3, -1, 4, 'read', [[0, 'shape', ROSE, 'pv-tipR', 5, 1], [2, 'last_answer', ORANGE, 'pv-tipO', 4, 2]], 'comma'),
+        N = grp('gaze at comma', 'gaze', GREEN, 3, 1, 5, 'look', null, 'comma');
+    C.part = 2; N.part = 2;                        // Progress: bind, then pass to the comma. Select: join, then gaze.
+    var top = Math.max.apply(null, B.mean), marks = []; B.mean.forEach(function (v, j) { if (v > 0.4 * top) marks.push(j); });
+    var g1 = argmax(G.mean), kj = argmax(K.mean), nj = argmax(N.mean), first = t.first_answer.trim(), second = t.second_answer.trim();
+    var l1 = isLetter(G.top) ? G.topLetter : '?', l2 = isLetter(N.top) ? N.topLetter : '?', stops = t.after_second === '<end>';
+    var onMarks = marks.reduce(function (a, j) { return a + B.mean[j]; }, 0), markNames = marks.map(function (j) { return j + 1; }).join(' and ');
+    var c0 = M.cols[0], c3 = M.cols[3], left = marks.filter(function (j) { return j > kj; }), leftNames = left.map(function (j) { return j + 1; }).join(' and ');
+    function at(m, part, more) { m.part = part; for (var k in more || {}) m[k] = more[k]; return m; }
+    S.groups = [B, R, G, K, C, N];
+    S.labels = [[t.ask, 'the shape token'], [':', 'the colon token'], [first, 'the answer token'], [',', 'the comma token']];
+    S.question = inputRow(t);
+    S.answer = function (n) { return n >= 5 ? [first, ',', second] : n >= 3 ? [first, ','] : []; };
+    S.moves = [mv(1, function (x, y) { return strip(marks, -1, x, y); }, fromPicture(marks[0], 0), 1200),
+               mv(2, function (x, y) { return strip([g1], -1, x, y); }, across(0, 1), 1100),
+               mv(3, function (x, y) { return strip([g1], -1, x, y); }, toPicture(1, g1), 950),
+               mv(3, function (x, y) { return letterBadge(l1, x, y); }, letterDown(g1, 1), 1100),
+               mv(4, function (x, y) { return strip([], kj, x, y); }, fromPicture(kj, 2), 1200),
+               at(mv(4, function (x, y) { return strip([], kj, x, y); }, across(2, 3), 1200), 2, { key: 'progress', gone: [5, 1] }),
+               arrive(5, function (x, y) { return strip(marks, -1, x, y); }, 'M' + c0 + ',' + YR + ' C' + (c0 + 150) + ',' + (YR + 200) + ' ' + (c3 - 150) + ',' + (YR + 200) + ' ' + c3 + ',' + (YR + 21), 1700),
+               at(join(5, function (x, y) { return strip(left, kj, x, y); }, 3), 1, { takes: 'progress' }),
+               at(mv(5, function (x, y) { return strip([nj], -1, x, y); }, toPicture(3, nj), 950), 2),
+               at(mv(5, function (x, y) { return letterBadge(l2, x, y); }, letterDown(nj, 3), 1100), 2)];
+    S.say = ['Press Play, or step through the plan.',
+      '<b style="color:var(--bind)">Bind.</b> At the shape token, the ' + B.heads.length + ' binding heads in layers ' + range(B.layers) + ' look at the picture. They put ' + pct(onMarks) + ' of their attention on the matching panels, ' + markNames + '.',
+      '<b style="color:var(--relay)">Relay.</b> At the colon token, relay heads in layers ' + Math.min.apply(null, R.reads[0].layers) + ' to ' + Math.max.apply(null, R.reads[0].layers) + ' read the shape token and carry the pointer to where the answer is written.',
+      '<b style="color:var(--gaze)">Gaze.</b> At the colon token, the ' + G.heads.length + ' gaze heads look at the picture. They put ' + pct(G.mean[g1]) + ' of their attention on panel ' + (g1 + 1) + ', and the model writes <b class="pv-mono">' + esc(first) + '</b>.',
+      ['<b style="color:var(--prog)">Progress.</b> At the answer token, the same ' + K.heads.length + ' binding heads bind the written letter to the panel it came from, with ' + pct(K.mean[kj]) + ' of their attention on panel ' + (kj + 1) + '. This is the progress: done up to panel ' + (kj + 1) + '.',
+       'At the comma token, the relay heads read the answer token (' + pct(C.reads[1].mean) + ' of their attention), and the progress moves to the comma token.'],
+      ['<b style="color:var(--gaze)">Select.</b> At the comma token, the relay heads also read the shape token (' + pct(C.reads[0].mean) + ' of their attention), which holds the pointer to the matching panels. The progress is taken out of the pointer, and panel ' + leftNames + ' is left.',
+       'The ' + N.heads.length + ' gaze heads look at panel ' + (nj + 1) + ' (' + pct(N.mean[nj]) + ' of their attention), and the model writes <b class="pv-mono">' + esc(second) + '</b>' + (stops ? ', and then it stops.' : '.')]];
+    return S;
+  }
+
+  function paintHeat(layers) {                     // layers: [{img, rgb, strength}], each scaled by its own maximum
+    var canvas = $('heat'); canvas.width = S.image.grid_w; canvas.height = S.image.grid_h;
+    var ctx = canvas.getContext('2d'), out = ctx.createImageData(canvas.width, canvas.height);
+    layers.forEach(function (L) {
+      var max = 0, i; for (i = 0; i < S.NI; i++) if (L.img[i] > max) max = L.img[i];
+      if (!max || !L.strength) return;
+      for (i = 0; i < S.NI; i++) {
+        var alpha = Math.pow(L.img[i] / max, 0.6) * 0.85 * L.strength * 255;
+        if (alpha > out.data[4 * i + 3]) { out.data[4 * i] = L.rgb[0]; out.data[4 * i + 1] = L.rgb[1]; out.data[4 * i + 2] = L.rgb[2]; out.data[4 * i + 3] = alpha; }
+      }
+    });
+    ctx.putImageData(out, 0, 0);
+  }
+
+  function draw(animate) {
+    var s = '', fresh = animate && step > lastStep ? step : 0, settled = fresh ? step - 1 : step;
+    if (!fresh) part = 99;                         // a step that is not being played shows all of its parts
+    function shown(st, pt) { return st < step || (st === step && (pt || 1) <= part); }
+    function isDone(st, pt) { return st <= settled || (st === step && (pt || 1) < part); }
+    function lines(st) { return !(mode === 'list' && st !== step && !(step <= 3 && st <= 3)); }   // the list has more tokens: after the first answer, draw only the current step's lines
+    var cur = 1;                                   // the part of this step that is in front; lines of every other part and step are drawn faint
+    S.groups.forEach(function (g) { if (g.step === step) cur = Math.max(cur, g.part || 1); (g.reads || []).forEach(function (r) { if ((r.step || g.step) === step) cur = Math.max(cur, r.part || g.part || 1); }); });
+    cur = Math.min(cur, part);
+    function live(st, pt) { return st === step && (pt || 1) === cur; }
+    function delay(l, st, pt) { return fresh && st === fresh && (pt || 1) === part ? ' class="pv-in" style="animation-delay:' + ((l - 15) * 45) + 'ms"' : ''; }
+    s += '<defs><marker id="pv-tipR" viewBox="0 0 8 8" refX="6.5" refY="4" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="' + ROSE.color + '"/></marker><marker id="pv-tipO" viewBox="0 0 8 8" refX="6.5" refY="4" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="' + ORANGE.color + '"/></marker></defs>';
+    M.cols.forEach(function (x, c) {
+      s += '<rect x="' + (x - 10) + '" y="' + (YB - NLAY * LH) + '" width="20" height="' + (NLAY * LH) + '" rx="5" fill="#f3f3f3" stroke="#d0d0d0"/>';
+      for (var l = 1; l < NLAY; l++) s += '<line x1="' + (x - 10) + '" x2="' + (x + 10) + '" y1="' + (YB - l * LH) + '" y2="' + (YB - l * LH) + '" stroke="#e2e2e2" stroke-width="0.6"/>';
+      var bw = Math.max(26, S.labels[c][0].length * 9.2 + 14), box = c === 0 ? ['#dcecf6', BLUE.color, '#111'] : c === 1 ? ['#FBEAF0', ROSE.color, '#111'] : ['#fff', ROSE.color, ROSE.color];
+      s += '<rect x="' + (x - bw / 2) + '" y="' + (YB + 8) + '" width="' + bw + '" height="22" rx="4" fill="' + box[0] + '" stroke="' + box[1] + '"/>';
+      s += '<text x="' + x + '" y="' + (YB + 24) + '" text-anchor="middle" font-family="JetBrains Mono, Menlo, monospace" font-size="15" font-weight="700" fill="' + box[2] + '">' + esc(S.labels[c][0]) + '</text>';
+      s += '<text x="' + x + '" y="' + (YB + 45) + '" text-anchor="middle" font-size="11.5" fill="#777">' + S.labels[c][1] + '</text>';
+    });
+    var axis = M.cols[0] - 64;
+    for (var l = 0; l <= 35; l += 5) s += '<text x="' + axis + '" y="' + (ly(l) + 3.5) + '" text-anchor="end" font-size="10.5" fill="#888">layer ' + l + '</text>';
+
+    S.groups.forEach(function (g) {                // curves into the picture, and arrows between tokens
+      if (picked) return;
+      var now = live(g.step, g.part), x = M.cols[g.col];
+      Object.keys(g.layers).forEach(function (l) {
+        var hs = g.layers[l];
+        if (g.kind === 'look') {
+          if (!shown(g.step, g.part) || !lines(g.step)) return;
+          var mean = g.mean.map(function (_, j) { return hs.reduce(function (a, h) { return a + g.panel[h][j]; }, 0) / hs.length; }), j = argmax(mean), px = panelX(j) + (g.style === GREEN ? 8 : 0);
+          s += '<path' + delay(+l, g.step, g.part) + ' d="M' + x + ',' + ly(+l) + ' C' + x + ',' + (ly(+l) - 110) + ' ' + px + ',120 ' + px + ',0" fill="none" stroke="' + g.style.color + '" stroke-width="' + (0.8 + 4.5 * mean[j]).toFixed(1) + '" opacity="' + (now ? 0.6 : 0.2) + '" stroke-linecap="round"/>';
+        } else g.reads.forEach(function (r) {
+          var w = hs.reduce(function (a, h) { return a + r.on[h]; }, 0), y = ly(+l) + r.dy, st = r.step || g.step, pt = r.part || g.part;
+          if (w < 0.02 || !shown(st, pt) || !lines(st)) return;
+          var x0 = M.cols[r.from] + 13, x1 = x - 18 - 8.5 * hs.length - 3, far = g.col - r.from > 1;   // a read that skips over other tokens dips under them, through the empty lower layers
+          s += (far ? '<path' + delay(+l, st, pt) + ' fill="none" d="M' + x0 + ',' + y + ' C' + (x0 + 150) + ',' + (y + 200) + ' ' + (x1 - 150) + ',' + (y + 200) + ' ' + x1 + ',' + y + '"' : '<line' + delay(+l, st, pt) + ' x1="' + x0 + '" x2="' + x1 + '" y1="' + y + '" y2="' + y + '"') + ' stroke="' + r.color + '" stroke-width="' + (r.dy ? 0.7 + 2.6 * Math.min(1, w) : 0.8 + 5 * Math.min(1, w)).toFixed(1) + '" opacity="' + (!live(st, pt) ? 0.2 : far ? 0.7 : 0.85) + '" marker-end="url(#' + r.tip + ')"/>';
+        });
+      });
+    });
+    S.groups.forEach(function (g, gi) {            // the heads, one dot each, at their layer
+      var on = shown(g.step, g.part), x = M.cols[g.col];
+      Object.keys(g.layers).forEach(function (l) {
+        g.layers[l].forEach(function (h, k) {
+          var sel = picked && picked.group === gi && picked.head === h;
+          s += '<circle' + (on ? delay(+l, g.step, g.part) : '') + ' data-group="' + gi + '" data-head="' + h + '" cx="' + (x + g.side * (18 + 8.5 * k)) + '" cy="' + ly(+l) + '" r="' + (sel ? 5 : 3.6) + '" fill="' + (on ? g.style.color : '#fff') + '" stroke="' + (sel ? '#111' : on ? g.style.color : '#c4c4c4') + '" stroke-width="' + (sel ? 2 : 1) + '" style="cursor:pointer"><title>Layer ' + l + ', head ' + g.heads[h][1] + '</title></circle>';
+        });
+      });
+    });
+    S.moves.forEach(function (m, i) { s += '<path id="pv-mv' + i + '" d="' + m.d + '" fill="none" stroke="none"/>'; });
+    s += '<g id="pv-badges">';
+    if (!picked) S.moves.forEach(function (m) { if (m.end && isDone(m.step, m.part) && !(m.gone && isDone(m.gone[0], m.gone[1]))) s += '<g data-key="' + (m.key || '') + '">' + m.make(m.end[0], m.end[1]) + '</g>'; });
+    s += '</g>';
+    $('fig').innerHTML = s;
+    lastStep = step;
+
+    var say;
+    if (picked) {
+      var g = S.groups[picked.group], h = picked.head, hd = g.heads[h], j = argmax(g.panel[h]);
+      paintHeat([{ img: g.heat[h], rgb: g.style.rgb, strength: 1 }]);
+      say = '<b style="color:' + g.style.color + '">Layer ' + hd[0] + ', head ' + hd[1] + '</b> at the ' + g.at + ' token: ' + pct(g.share[h]) + ' of its attention is on the picture, ' + pct(g.panel[h][j]) + ' on panel ' + (j + 1) + (g.kind === 'read' ? g.reads.map(function (r) { return ', ' + pct(r.on[h]) + ' on the ' + S.labels[r.from][1].replace('the ', ''); }).join('') : '') + '. <span class="pv-note">Click a step to go back.</span>';
+    } else {
+      var looks = S.groups.filter(function (g) { return g.kind === 'look' && live(g.step, g.part); }), strength = 1;
+      if (!looks.length) { looks = S.groups.filter(function (g) { return g.kind === 'look' && g.step === step && shown(g.step, g.part); }); strength = 0.45; }
+      if (!looks.length) { var last = Math.max.apply(null, S.groups.filter(function (g) { return g.kind === 'look' && g.step < step; }).map(function (g) { return g.step; }).concat([0])); looks = S.groups.filter(function (g) { return g.kind === 'look' && g.step === last; }); strength = 0.45; }
+      paintHeat(looks.map(function (g) { return { img: g.sum, rgb: g.style.rgb, strength: strength }; }));
+      say = S.say[step]; if (Array.isArray(say)) say = say.slice(0, part).join(' ');
+    }
+    $('say').innerHTML = say;
+    written(picked ? -1 : settled);
+    document.querySelectorAll('#pv-steps button').forEach(function (b) { b.setAttribute('aria-pressed', String(+b.dataset.step === step && !picked)); });
+  }
+
+  function wait(ms) { return new Promise(function (done) { setTimeout(done, ms); }); }
+  function slide(el, path, ms, token) {            // slide a small picture along a path
+    return new Promise(function (done) {
+      var length = path.getTotalLength(), start = performance.now();
+      (function frame(now) {
+        if (token !== animToken) return done(false);
+        var u = Math.min(1, (now - start) / ms), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, p = path.getPointAtLength(length * e);
+        el.setAttribute('transform', 'translate(' + p.x.toFixed(1) + ',' + p.y.toFixed(1) + ')');
+        if (u < 1) requestAnimationFrame(frame); else done(true);
+      })(start);
+    });
+  }
+  function tween(ms, token, set) {                 // run set(0..1) over ms
+    return new Promise(function (done) {
+      var start = performance.now();
+      (function frame(now) {
+        if (token !== animToken) return done(false);
+        var u = Math.min(1, (now - start) / ms); set(u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+        if (u < 1) requestAnimationFrame(frame); else done(true);
+      })(start);
+    });
+  }
+  async function runStep(n) {
+    var token = ++animToken, waiting = [], parts = Math.max.apply(null, S.moves.map(function (m) { return m.step === n ? m.part || 1 : 1; }));
+    for (var p = 1; p <= parts; p++) {
+      if (p > 1) { await wait(800); if (token !== animToken) return false; part = p; lastStep = n - 1; draw(true); }   // show the next part of this step
+      var layer = $('badges');
+      await wait(500); if (token !== animToken) return false;
+      for (var i = 0; i < S.moves.length; i++) {
+        var m = S.moves[i]; if (m.step !== n || (m.part || 1) !== p) continue;
+        if (m.join) {                              // the picture that came in slides onto the one that waits here, and they become one
+          var old = [].slice.call(layer.querySelectorAll('[data-key="' + m.takes + '"]'));
+          await wait(450); if (token !== animToken) return false;
+          if (!(await tween(650, token, function (e) { waiting.forEach(function (w) { w.el.setAttribute('transform', 'translate(' + m.end[0] + ',' + (w.y + (m.end[1] - w.y) * e).toFixed(1) + ')'); }); }))) return false;
+          layer.insertAdjacentHTML('beforeend', m.make(m.end[0], m.end[1]));
+          var merged = layer.lastElementChild; merged.setAttribute('opacity', 0);
+          if (!(await tween(750, token, function (e) { merged.setAttribute('opacity', e); waiting.map(function (w) { return w.el; }).concat(old).forEach(function (el) { el.setAttribute('opacity', 1 - e); }); }))) return false;
+          waiting.forEach(function (w) { w.el.remove(); }); old.forEach(function (el) { el.remove(); }); waiting = [];
+          continue;
+        }
+        layer.insertAdjacentHTML('beforeend', m.make(-99, -99));
+        var el = layer.lastElementChild, path = $('mv' + i);
+        if (!(await slide(el, path, m.ms, token))) return false;
+        if (m.temp) waiting.push({ el: el, y: path.getPointAtLength(path.getTotalLength()).y });
+        else if (!m.end) el.remove();
+      }
+    }
+    written(n);
+    return token === animToken;
+  }
+  function go(n) { var forward = n > lastStep; picked = null; step = n; part = 1; draw(true); if (forward) return runStep(n); animToken++; return Promise.resolve(true); }
+  function stop() { playing = false; animToken++; $('play').setAttribute('aria-pressed', 'false'); $('play').textContent = 'Play'; }
+  $('play').addEventListener('click', async function () {
+    if (playing) { stop(); draw(false); return; }
+    playing = true; $('play').setAttribute('aria-pressed', 'true'); $('play').textContent = 'Pause';
+    lastStep = 0;
+    for (var n = 1; n <= M.steps.length; n++) {
+      if (!(await go(n)) || !playing) return;
+      if (n < M.steps.length) { var token = animToken; await wait(700); if (token !== animToken || !playing) return; }
+    }
+    playing = false; $('play').setAttribute('aria-pressed', 'false'); $('play').textContent = 'Play';
   });
-  show(0);
+  $('fig').addEventListener('click', function (e) {
+    var c = e.target.closest('circle'); if (!c) return;
+    stop(); picked = { group: +c.dataset.group, head: +c.dataset.head }; draw(false);
+  });
+  $('steps').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { stop(); go(+b.dataset.step); } });
+  $('asks').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { stop(); load(mode, b.dataset.ask); } });
+  $('modes').innerHTML = Object.keys(MODES).map(function (k) { return '<button type="button" data-mode="' + k + '">' + MODES[k].label + '</button>'; }).join('');
+  $('modes').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { stop(); load(b.dataset.mode, MODES[b.dataset.mode].first); } });
+
+  async function load(newMode, ask) {
+    var key = newMode + ' ' + ask, raw = scenes[key];
+    if (!raw) raw = scenes[key] = await (await fetch(MODES[newMode].file(ask))).json();
+    mode = newMode; M = MODES[mode]; animToken++; picked = null; step = 0; lastStep = 0;
+    M.build(raw);
+    $('pic').src = M.picture; $('pic').parentNode.style.width = (100 * M.PW / 900) + '%';
+    $('lead').textContent = M.lead;
+    $('asks').innerHTML = M.asks.map(function (a) { return '<button type="button" data-ask="' + a + '" aria-pressed="' + (a === ask) + '">' + a + '</button>'; }).join(' ');
+    $('steps').innerHTML = M.steps.map(function (st, i) { return '<button type="button" data-step="' + (i + 1) + '" style="--c:' + st[1] + '">' + st[0] + '</button>'; }).join('');
+    document.querySelectorAll('#pv-modes button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === mode)); });
+    $('question').innerHTML = S.question;
+    draw(false);
+  }
+  try { await load('one', MODES.one.first); } catch (e) { $('say').textContent = 'The recorded runs could not be loaded.'; return; }
+
+
+  // The two folded sections read every head of one recorded pair. That file is large, so it is loaded when one is first opened.
+  var opened = false;
+  async function explorer() {
+    if (opened) return; opened = true;
+    var D;
+    try { D = await (await fetch('plan/heads.json')).json(); } catch (e) { opened = false; return; }
+    var NL = D.layers, NH = D.heads_per_layer, NI = D.image.grid_h * D.image.grid_w;
+    var COLORS = { binding: 'var(--bind)', query: 'var(--bind)', key: 'var(--bind)', relay: 'var(--relay)', gaze: 'var(--gaze)', language: 'var(--lang)', any: '#444' };
+    var RGB = { binding: [0, 114, 178], query: [0, 114, 178], key: [0, 114, 178], relay: [140, 59, 90], gaze: [0, 158, 115], language: [122, 81, 149], any: [60, 60, 60] };
+    var HOME = { binding: 'shape', query: 'shape', key: 'shape', relay: 'colon', gaze: 'colon', language: 'colon' };
+    var askPanel = D.target.shapes.indexOf(D.target.ask);
+
+    var A = {};
+    ['shape', 'colon'].forEach(function (t) {
+      var a = D.attention[t];
+      A[t] = { image: bytes(a.image), text: bytes(a.text), peak: a.peak, onImage: a.on_image, onPanel: a.on_panel, textPos: a.text_positions, nt: a.text_positions.length };
+    });
+    function idx(h) { return h[0] * NH + h[1]; }
+    // summed attention of a list of heads at one token: over the image grid and over the text tokens
+    function attention(heads, tok) {
+      var a = A[tok], img = new Float32Array(NI), txt = new Float32Array(a.nt), onImage = 0, panels = [0, 0, 0, 0];
+      heads.forEach(function (h) {
+        var k = idx(h), p = a.peak[k] / 255, i;
+        for (i = 0; i < NI; i++) img[i] += a.image[k * NI + i] * p;
+        for (i = 0; i < a.nt; i++) txt[i] += a.text[k * a.nt + i] * p;
+        onImage += a.onImage[k];
+        a.onPanel[k].forEach(function (v, j) { panels[j] += v; });
+      });
+      var n = heads.length;
+      return { img: img, txt: Array.from(txt, function (v) { return v / n; }), onImage: onImage / n, panels: panels.map(function (v) { return v / n; }) };
+    }
+    function paint(canvas, layers) {            // layers: [{img, rgb, strength}]
+      canvas.width = D.image.grid_w; canvas.height = D.image.grid_h;
+      var ctx = canvas.getContext('2d'), out = ctx.createImageData(canvas.width, canvas.height);
+      layers.forEach(function (L) {
+        var max = 0, i; for (i = 0; i < NI; i++) if (L.img[i] > max) max = L.img[i];
+        if (!max || !L.strength) return;
+        for (i = 0; i < NI; i++) {
+          var alpha = Math.pow(L.img[i] / max, 0.6) * 0.82 * L.strength;
+          if (alpha * 255 > out.data[4 * i + 3]) { out.data[4 * i] = L.rgb[0]; out.data[4 * i + 1] = L.rgb[1]; out.data[4 * i + 2] = L.rgb[2]; out.data[4 * i + 3] = alpha * 255; }
+        }
+      });
+      ctx.putImageData(out, 0, 0);
+    }
+
+    // names the head explorer below still uses
+    var firstImage = D.image.positions[0], SETS = D.head_sets;
+    function imageShare(att) { var s = att.panels.reduce(function (a, b) { return a + b; }, 0); return att.panels.map(function (v) { return v / s; }); }
+    $('img2').src = 'plan/target.png';
+
+    // ------------------------------------------------------------------ the head explorer
+    var state = { set: 'binding', head: null, tok: 'shape' };
+    var TABS = ['binding', 'query', 'key', 'relay', 'gaze', 'language'];
+    var TABNAME = { binding: 'Binding heads', query: 'Query heads', key: 'Key heads', relay: 'Relay heads', gaze: 'Gaze heads', language: 'Language heads' };
+    $('tabs').innerHTML = TABS.map(function (k) { return '<button type="button" data-set="' + k + '" style="--c:' + COLORS[k] + '">' + TABNAME[k] + ' (' + SETS[k].length + ')</button>'; }).join('');
+    $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) selectSet(b.dataset.set); });
+    document.querySelectorAll('[data-tok]').forEach(function (b) { b.addEventListener('click', function () { state.tok = b.dataset.tok; drawHeads(); }); });
+    $('chips').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      state.head = b.dataset.head === 'all' ? null : b.dataset.head.split(',').map(Number); drawHeads();
+    });
+    function selectSet(k) { state.set = k; state.head = null; state.tok = HOME[k]; drawHeads(); }
+    function setOf(h) { return TABS.filter(function (k) { return SETS[k].some(function (g) { return g[0] === h[0] && g[1] === h[1]; }); }); }
+    function drawHeads() {
+      var k = state.set, heads = state.head ? [state.head] : SETS[k], inSet = !state.head || setOf(state.head).indexOf(k) >= 0;
+      var kind = inSet ? k : (setOf(state.head)[0] || 'any'), color = COLORS[kind];
+      document.querySelectorAll('#pv-tabs button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.set === k && inSet)); });
+      document.querySelectorAll('[data-tok]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tok === state.tok)); });
+      var chips = '<button type="button" data-head="all" style="--c:' + COLORS[k] + '" aria-pressed="' + (!state.head) + '">all ' + SETS[k].length + '</button>';
+      SETS[k].forEach(function (h) { chips += '<button type="button" data-head="' + h + '" style="--c:' + COLORS[k] + '" aria-pressed="' + (!!state.head && state.head[0] === h[0] && state.head[1] === h[1]) + '">L' + h[0] + ' H' + h[1] + '</button>'; });
+      $('chips').innerHTML = chips;
+      var att = attention(heads, state.tok), shares = imageShare(att);
+      paint($('heat2'), [{ img: att.img, rgb: RGB[kind], strength: 1 }]);
+      var who = state.head ? 'Layer ' + state.head[0] + ', head ' + state.head[1] + (setOf(state.head).length ? ' (' + setOf(state.head).map(function (s) { return TABNAME[s].toLowerCase().replace(' heads', ''); }).join(', ') + ' head)' : ' (in none of the groups)') : 'The ' + SETS[k].length + ' ' + TABNAME[k].toLowerCase() + ' together';
+      $('info').innerHTML = '<b style="color:' + color + '">' + who + '</b> at the ' + state.tok + ' token: ' + pct(att.onImage) + ' of the attention is on the picture. Of that, panels 1 to 4 get ' + shares.map(pct).join(', ') + '.';
+      var a = A[state.tok], max = Math.max.apply(null, att.txt.concat([att.onImage])), bars = '', labels = '', done = false;
+      a.textPos.forEach(function (pos, i) {
+        if (!done && pos > firstImage) { done = true; bars += '<div style="--c:' + color + '; height:' + (100 * att.onImage / max) + '%; opacity:.45" title="the picture: ' + pct(att.onImage) + '"></div>'; labels += '<span>picture</span>'; }
+        var t = D.tokens.filter(function (t) { return t.position === pos; })[0];
+        bars += '<div style="--c:' + color + '; height:' + (100 * att.txt[i] / max) + '%" title="' + esc(show(t.text)) + ': ' + (100 * att.txt[i]).toFixed(1) + '%"></div>';
+        labels += '<span>' + esc(show(t.text)) + '</span>';
+      });
+      $('bars').innerHTML = bars; $('barlabels').innerHTML = labels;
+      drawMap();
+    }
+    function drawMap() {
+      var c = $('map'), ctx = c.getContext('2d'), out = ctx.createImageData(NH, NL), a = A[state.tok], member = {};
+      SETS[state.set].forEach(function (h) { member[idx(h)] = 1; });
+      for (var i = 0; i < NL * NH; i++) {
+        var v = Math.pow(a.onPanel[i][askPanel], 0.5), rgb = member[i] ? RGB[state.set] : [70, 70, 70];
+        out.data[4 * i] = 255 - (255 - rgb[0]) * v; out.data[4 * i + 1] = 255 - (255 - rgb[1]) * v; out.data[4 * i + 2] = 255 - (255 - rgb[2]) * v; out.data[4 * i + 3] = 255;
+      }
+      if (state.head) { var j = idx(state.head); out.data[4 * j] = 213; out.data[4 * j + 1] = 94; out.data[4 * j + 2] = 0; }
+      ctx.putImageData(out, 0, 0);
+      $('mapnote').textContent = 'One square is one head, and one row is one layer. A square is dark when that head, at the ' + state.tok + ' token, looks at panel ' + (askPanel + 1) + ', the panel the question asks about. The colored squares are the group picked on the left, and the orange square is the head being shown. Click any square to see that head.';
+    }
+    $('map').addEventListener('click', function (e) {
+      var r = e.target.getBoundingClientRect(), head = Math.min(NH - 1, Math.floor((e.clientX - r.left) / r.width * NH)), layer = Math.min(NL - 1, Math.floor((e.clientY - r.top) / r.height * NL));
+      state.head = [layer, head]; var own = setOf(state.head); if (own.length && own.indexOf(state.set) < 0) state.set = own[0]; drawHeads();
+    });
+
+    // ------------------------------------------------------------------ guess the letter
+    $('pair').innerHTML = ['source', 'target'].map(function (side) {
+      var s = D[side];
+      return '<div class="pv-card"><h3>' + (side === 'source' ? 'Source run' : 'Target run') + '</h3><div class="pv-strip"><img src="plan/' + side + '.png" alt="' + side + ' picture"></div><div class="pv-ask"><span class="pv-mono">' + esc(s.question) + '</span> Answer: <b class="pv-mono">' + esc(s.answer.trim()) + '</b></div></div>';
+    }).join('');
+    var options = []; Object.keys(D.outcome_letters).forEach(function (k) { var l = D.outcome_letters[k]; if (options.indexOf(l) < 0) options.push(l); }); options.sort();
+    D.patches.forEach(function (pt) {
+      var el = document.createElement('div'); el.className = 'pv-patch'; el.style.setProperty('--c', COLORS[pt.stage]);
+      el.innerHTML = '<p>' + esc(pt.text) + '. What does the target write?</p><div class="pv-opts">' + options.map(function (l) { return '<button type="button">' + l + '</button>'; }).join('') + '</div><div class="pv-out" aria-live="polite"></div>';
+      el.querySelector('.pv-opts').addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        var truth = pt.answer.trim();
+        el.querySelectorAll('.pv-opts button').forEach(function (x) { x.className = x.textContent === truth ? 'pv-right' : (x === b ? 'pv-wrong' : ''); });
+        el.querySelector('.pv-out').innerHTML = (b.textContent === truth ? 'Yes. ' : 'No. ') + 'The target writes <b class="pv-mono">' + esc(truth) + '</b>: ' + esc(D.outcomes[pt.outcome] || 'another token') + '.';
+      });
+      $('patches').appendChild(el);
+    });
+
+    drawHeads();
+  }
+  document.querySelectorAll('#plan details').forEach(function (d) { d.addEventListener('toggle', function () { if (d.open) explorer(); }); });
 })();
 
 /* Primer animations. Each one is a list of frames; Back, Next, and Play step through them. */
