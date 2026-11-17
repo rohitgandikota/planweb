@@ -187,12 +187,12 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 
 <div class="card" style="max-width: 1020px;">
 <div class="card-block">
-<h3>How does a VLM decide what to describe first, what to describe next, and in what order?</h3>
+<h3>How does a VLM decide what to describe first, what to describe next, and when to stop?</h3>
 <p>
-A <b>vision-language model</b>, or <b>VLM</b>, looks at a picture and answers questions about it in words. Ask a VLM what is in a photo, and it names things one at a time: a dog, then a cat, then a horse. It almost never names the same thing twice, and it rarely skips one. But a picture has no reading order. Nothing in a photo says the dog comes before the cat. So how does a VLM decide what to describe first, what comes next, and when it is done?
+A <b>vision-language model</b>, or <b>VLM</b>, looks at a picture and answers questions about it in words. Ask one what animals are in a photo, and it names them one at a time: a dog, then a cat, then a horse. It rarely names the same animal twice, and it rarely skips one. Yet a picture has no reading order. Nothing in a photo says the dog comes before the cat. So something inside the VLM must decide what to describe next, and keep track of what it has already said.
 </p>
 <p>
-We opened up a VLM and traced how it does this. We found that the VLM <b>decides where to look before it looks</b>. A few small teams of parts inside the VLM work together. One team finds the right places in the picture. Another carries those places to the moment the VLM is about to answer. A third looks back at the picture and reads what is there. And after every answer, the VLM keeps a simple bookmark of how far it has come.
+We opened up a VLM and traced how it does this. We find that the VLM <b>decides where to look before it looks</b>. It keeps a small plan. First, it finds the parts of the picture that answer the question. After every answer, it marks how far it has come through the picture. Then it picks the next part to describe, looks there, and puts what it sees into words. Each step runs through a few attention heads, so we can read the plan and edit it.
 </p>
 </div><!--card-block-->
 </div><!--card-->
@@ -253,11 +253,28 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 
 
 
-<p>A VLM writes its answer one token at a time, and every new token goes through the whole stack again. This creates a real puzzle. The VLM has no notepad. It can't write down "I already said dog" and look at it later. Every time it starts a new word, it has to work out again, from the words it has already written, what is left to say.</p>
+<p>One more fact matters for this story. A VLM writes its answer one token at a time, and every new token goes up the whole stack of layers again. The VLM has no notepad. It can't write down "I already said dog" and check it later. Each time it starts a new word, it has to work out again, from the words it has already written, what is left to say.</p>
 <p class="question">So how does a VLM pick the next thing to describe, and how does it keep track of what it has already described?</p>
 
+<h2>Why do we study a strip of panels instead of photos?</h2>
+<p>Photos are messy. We can't control which objects the VLM will mention, or in what order, so it is hard to test anything cleanly. So we built a simple puzzle where we control everything. Each picture is a <b>strip of panels</b>. Each panel holds one shape with a letter inside it. We ask the VLM for the letter inside a named shape, and we start its reply with <i>"Answer:"</i> so that the next token it writes is the letter.</p>
+<div class="demo">
+  <div class="strip" style="--n:4" data-strip="plus:R star:T heart:P circle:K" data-hit="1"></div>
+  <div class="prompt">What is the letter inside the star? &nbsp;Answer: <span class="ans">T</span></div>
+</div>
+<p>We ask about a shape, not about "panel 2", on purpose. To answer, the VLM first has to find where the star is, and only then read the letter there. That gives us two separate jobs to look for inside the VLM: finding the place, and reading it.</p>
+<p>Three tokens of this puzzle matter for everything that follows, so we give them names. The <b>shape token</b> is the word that names the shape, <span class="tok">star</span>. The <b>colon token</b> is the <span class="tok">:</span> after "Answer", the last token before the VLM writes its answer. The <b>answer token</b> is the letter it writes, <span class="tok">T</span>.</p>
+<p>The puzzle also has a list version. When the same shape sits in several panels, we ask for the letter inside <i>each</i> heart, and the VLM lists the letters from left to right. After each letter it writes a comma, and the <b>comma token</b> is where it writes the next letter from. This is where it has to remember what it has already written.</p>
+<div class="demo">
+  <div class="strip" style="--n:6" data-strip="heart:E diamond:M heart:U diamond:V heart:P heart:A" data-hit="0 2 4 5"></div>
+  <div class="prompt">What is the letter inside each heart? &nbsp;Answer: <span class="ans">E, U, P, A</span></div>
+</div>
+<p>Later, we check that what we find on these strips also happens on real photos.</p>
+
 <h2>What is the plan?</h2>
-<p>Here is the answer in one picture. Click through it one step at a time. In the sections after it, we explain each step and how we found it.</p>
+<p>Here is what we found, in one picture, before we show how we found it. Two ideas carry the whole story. A <b>pointer</b> is a note inside the VLM that says which panel to look at, like <i>"look in panel 2"</i>, without saying yet what is there. <b>Progress</b> is a note that says how far the list has come, like <i>"done up to panel 3"</i>.</p>
+<p>The VLM makes and uses these notes in a few steps, and each step runs through a small set of attention heads. In <b>Bind</b>, the <b>binding heads</b> at the shape token match the shape against the picture and make a pointer to every matching panel. In <b>Relay</b>, the <b>relay heads</b> carry that pointer to the token where the answer is written. In <b>Gaze</b>, the <b>gaze heads</b> follow the pointer back to the picture and read the letter. A list adds two more steps. In <b>Progress</b>, the same binding heads tie each written letter to the panel it came from, and the comma token picks this up as progress. In <b>Select</b>, the VLM takes the nearest matching panel after the progress, or stops.</p>
+<p>Click through the steps below. Each column is one token, drawn as its stack of 36 layers.</p>
 <figure id="plan" aria-label="Interactive walk-through of the plan">
 <div class="pv-card">
   <div class="pv-picker"><span id="pv-modes" class="pv-modes"></span></div>
@@ -278,7 +295,7 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
     &nbsp;&nbsp; <svg width="23" height="23" viewBox="-11.5 -11.5 23 23" aria-hidden="true"><circle r="10" fill="#fff" stroke="#009E73" stroke-width="2"/><text y="4.6" text-anchor="middle" font-family="JetBrains Mono, Menlo, monospace" font-size="13" font-weight="700">E</text></svg> the letter read there
     &nbsp;&nbsp; Each dot is one attention head at its layer. Click a dot to see where it looks.</p>
 </div>
-<figcaption>The dots, curves, arrows, and percentages are read from recorded runs of Qwen3-VL-8B. The small pictures that slide between the tokens are our drawing of what each step carries, as the patching experiments below show.</figcaption>
+<figcaption>The dots, curves, arrows, and percentages come from recorded runs of Qwen3-VL-8B, the VLM we study. The small pictures that slide between the tokens are our drawing of what each step carries, which the experiments below test one at a time.</figcaption>
 
 <details class="primer">
 <summary>Look at any head</summary>
@@ -316,31 +333,16 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <details class="primer">
 <summary>Test the plan: guess the letter before you look</summary>
 <div class="primer-body">
-<p class="pv-note" style="margin:0 0 4px">A patch copies one internal state from the source run into the target run. The letter the target then writes tells us what that state carried.</p>
+<p class="pv-note" style="margin:0 0 4px">Here we copy one internal state from one run of the VLM, the <b>source run</b>, into another, the <b>target run</b>. This copy is called a patch, and the sections below explain it. Guess the letter the target writes, then check: it tells us what the copied state carried.</p>
 <div class="pv-pair" id="pv-pair"></div>
 <div class="pv-patches" id="pv-patches"></div>
 </div>
 </details>
 </figure>
 
-<h2>Why do we use a strip of panels instead of photos?</h2>
-<p>Photos are messy. We can't control which objects the VLM will mention, or in what order, so it is hard to test anything cleanly. Instead, we built a simple puzzle where we control everything. Each picture is a <b>strip of panels</b>. Each panel holds one shape, with a letter written inside it. We ask the VLM for the letter inside a named shape.</p>
-<div class="demo">
-  <div class="strip" style="--n:4" data-strip="plus:R star:T heart:P circle:K" data-hit="1"></div>
-  <div class="prompt">What is the letter inside the star? &nbsp;Answer: <span class="ans">T</span></div>
-</div>
-<p>Notice that we ask about a shape, not about "panel 2". To answer, the VLM first has to find where the star is, and only then read the letter. That gives us two separate jobs to look for inside the VLM: finding the place, and reading it.</p>
-<p>The puzzle also has a list version. When the same shape shows up in several panels, we ask for the letter inside <i>each</i> heart, and the VLM lists them from left to right. This is where it has to remember what it has already written.</p>
-<div class="demo">
-  <div class="strip" style="--n:6" data-strip="heart:E diamond:M heart:U diamond:V heart:P heart:A" data-hit="0 2 4 5"></div>
-  <div class="prompt">What is the letter inside each heart? &nbsp;Answer: <span class="ans">E, U, P, A</span></div>
-</div>
-<p>Later, we check that everything we find on these strips also happens on real photos.</p>
-
 <h2>How can we tell what the VLM is thinking?</h2>
-<p>We can't ask the VLM what it is thinking. But we can do something better. We can copy a token's state from one run of the VLM and paste it into another run, at the same token and the same layer, and see how the answer changes. This is called <b>activation patching</b>.</p>
-<p>Concretely, we run the VLM on two puzzles. The <b>source</b> run asks for the heart in one picture, and the <b>target</b> run asks for the star in a different picture. We paste one state from the source into the target and read the target's new answer. We design the two pictures so that each kind of information the state could carry makes the target say a different letter. So the letter tells us what was inside the state.</p>
-
+<p>We can't ask the VLM what it is thinking. But we can do something better. We can run the VLM twice, copy one internal state from the first run into the second, and see how the answer changes. This is called <b>activation patching</b>.</p>
+<p>Concretely, the <b>source run</b> asks for the heart in one picture, and the <b>target run</b> asks for the star in a different picture. We copy one state of the source run into the target run, at the same token and the same layer, and leave everything else alone. Then we read the letter the target writes. We build the two pictures so that each kind of information the copied state could carry makes the target write a different letter. So the letter tells us what the state carried.</p>
 <details class="primer" id="primer-patching">
 <summary>Primer: what is activation patching?</summary>
 <div class="primer-body">
@@ -354,7 +356,7 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 
 <div class="demo">
 <h3>Why does one letter tell us so much?</h3>
-<p>Patching only works if the answer tells us what the pasted activation carried. So we build every pair of puzzles so that each kind of information it could carry leads the target to a different letter.</p>
+<p>This only works if the letter tells us what the copied state carried. So we build every pair of puzzles so that each kind of information leads the target to a different letter.</p>
 <div class="pair">
   <span class="lab">Source</span>
   <div><div class="strip" style="--n:4" data-strip="star:G circle:C plus:Z heart:D" data-hit="3"></div><div class="prompt">...inside the heart? &nbsp;<span class="ans">D</span></div></div>
@@ -365,65 +367,67 @@ We opened up a VLM and traced how it does this. We found that the VLM <b>decides
 <div class="outcomes">
   <div><span class="L">T</span>Nothing useful moved. The target answers its own question as before.</div>
   <div><span class="L">D</span>The source's finished answer moved over.</div>
-  <div><span class="L">K</span>A <b>place</b> moved over: "look in panel 4". The target looked there in its own picture.</div>
-  <div><span class="L">P</span>The question moved over: "find the heart". The target found the heart in its own picture.</div>
+  <div><span class="L">K</span>A <b>pointer</b> moved over: "look in panel 4". The target looked there in its own picture.</div>
+  <div><span class="L">P</span>The request moved over: "find the heart". The target found the heart in its own picture.</div>
   <div><span class="L">R</span>The layout moved over: the target searched for its star among the source's shapes.</div>
 </div>
-<p>One more check runs through every experiment. Whenever we paste a team of heads, we also paste the same number of heads picked at random from the same layers. If the random heads do nothing, the effect belongs to the team we found, not to pasting heads in general.</p>
+<p>One more check runs through every experiment. Whenever we patch a set of heads, we also patch the same number of heads picked at random from the same layers. If the random heads do nothing, the effect belongs to the heads we found, not to patching heads in general.</p>
 </div>
 
 
-<p>Our first patch is at the colon after <i>"Answer"</i>, the last token before the answer, one layer at a time. Low in the stack, pasting changes nothing. In the middle, around layers 23 to 29, the target answers <span class="tok">K</span>: the pasted state says <i>"the answer is in panel 4"</i>, and the target goes and reads its own panel 4. Near the top, the target simply copies the source's letter <span class="tok">D</span>. So halfway through, the VLM already knows <i>where</i> the answer is, but has not yet read <i>what</i> it is. We call that kind of "look here" note a <b>pointer</b>.</p>
+<p>Our first patch copies the whole state of the colon token, one layer at a time. In the low layers, the patch changes nothing, and the target answers <span class="tok">T</span>. In layers 23 to 29, the target answers <span class="tok">K</span>: the copied state says <i>"the answer is in panel 4"</i>, and the target goes and reads its own panel 4. From layer 30 on, the target simply copies the source's letter, <span class="tok">D</span>. So halfway up the stack, the colon token already holds a pointer. The VLM knows <i>where</i> the answer is, but has not yet read <i>what</i> it is.</p>
 
-<h2>Binding: when does the VLM decide where to look?</h2>
-<p>If the colon already holds a pointer by the middle layers, the pointer must have been made somewhere before it. So we repeated the pasting at every token of the question, at every layer. Only one other token lit up: the shape word itself, <span class="tok">star</span>. The VLM works out where the star is while it is still reading the question.</p>
-<p>Next, we zoomed in on the attention heads at that word. Concretely, we pasted the output of just one attention head at a time, for every one of the VLM's 1,152 heads, and counted how often the target switched to <span class="tok">K</span>. A small team of 16 heads, in layers 15 to 21, did almost all the work. Pasting just those 16 moves the pointer most of the time. As a check, we also pasted 16 heads picked at random from the same layers, and they did almost nothing. We call the 16 heads <b>binding heads</b>, because they bind a word in the question to a place in the picture.</p>
-<p>We could even split their job in two. Remember that a head matches its <b>query</b>, what it is looking for, against the <b>keys</b> of the image tokens, the labels they carry. When we pasted only the queries, the target searched for a heart in its own picture and answered <span class="tok">P</span>. When we pasted only the image keys, the target searched for its own star among the source's shapes and answered <span class="tok">R</span>. When we pasted both, the pointer itself moved. In plain words, the head says <i>"I need a star"</i>, and the patches answer <i>"I am the panel with the star."</i></p>
+<h2>Binding: where does the pointer come from?</h2>
+<p>If the colon token holds a pointer by layer 23, the pointer must have been made somewhere before it. So we repeated the patch at every token of the question, at every layer. Only one other token carries the pointer: the shape token, <span class="tok">star</span>, in layers 16 to 20. The VLM works out where the star is while it is still reading the question.</p>
+<p>Next, we looked at the attention heads at the shape token. Concretely, we patched the output of one attention head at a time, for all 1,152 heads of the VLM, and ranked the heads by how much each patch pushed the target toward <span class="tok">K</span>. The top 16 heads, in layers 15 to 21, do the work. Patching these 16 together moves the pointer in most cases, while 16 random heads from the same layers almost never do. We call them <b>binding heads</b>, because they bind a word in the question to a place in the picture.</p>
+<p>We can even split their job in two. Remember that a head compares its <b>query</b>, what it is looking for, with the <b>keys</b> of the image tokens, what each of them offers. When we patched only the queries, the target looked for a heart in its own picture and answered <span class="tok">P</span>. When we let the heads read only the source's image keys, the target looked for its own star among the source's shapes and answered <span class="tok">R</span>. When we patched both, the pointer itself moved. In plain words, the query says <i>"I need a star"</i>, and the key answers <i>"I am the panel with the star."</i></p>
 <figure class="center_image" style="margin-top: 30px">
   <center><img src="images/paper/binding.png" style="width:100%; max-width:900px" alt="Three plots from the paper on where the pointer appears."></center>
-  <figcaption><b>Finding where the VLM decides where to look.</b> (a) Pasting at the colon, one layer at a time. Each line is how often the target gives one of the five letters. The low layers keep <span class="tok">T</span>, the middle layers give <span class="tok">K</span>, and the top layers give <span class="tok">D</span>. (b) The same pasting at every token (across) and every layer (up and down). Darker means the pointer moved more often. Only two spots light up: the word <span class="tok">star</span> around layer 20, and the colon from layer 23 on. (c) Each small square is one attention head at the word <span class="tok">star</span>, pasted on its own. The 16 outlined heads, in layers 15 to 21, carry the pointer: <b>the VLM decides where to look while it is still reading the question.</b></figcaption>
+  <figcaption><b>Finding where the VLM decides where to look.</b> (a) We patch the colon token's state one layer at a time. Each line shows how often the target writes one of the five letters. The low layers keep <span class="tok">T</span>, layers 23 to 29 give <span class="tok">K</span>, and the top layers give <span class="tok">D</span>. (b) The same patch at every token (across) and every layer (up). Darker means the pointer moved more often. Only two places light up: the shape token <span class="tok">star</span> in layers 16 to 20, and the colon token from layer 23 on. (c) Each small square is one attention head at the shape token, patched on its own. The 16 outlined heads, in layers 15 to 21, are the binding heads: <b>the VLM decides where to look while it is still reading the question.</b></figcaption>
 </figure>
 
-<h2>Relay: how does the pointer travel to the answer?</h2>
-<p>Here is a gap. The pointer is made at the word <span class="tok">star</span>, but the answer is written several tokens later, at the colon. Remember that attention heads are the only way information moves between tokens. So some heads at the colon must reach back to <span class="tok">star</span> and fetch the pointer.</p>
-<p>Concretely, we let one head at a time at the colon read from the source run instead of the target, and counted how often the target switched to <span class="tok">K</span>. Another team of 16 heads stood out. When we let these heads read from only one token at a time, they got the pointer mostly from <span class="tok">star</span>, exactly where the binding heads left it. We call them <b>relay heads</b>.</p>
-<p>Two more tests tie the teams together. If we stop the relay heads from looking at the question, the VLM almost always loses its answer. And here is the cleaner one: we move the pointer with the binding heads in a separate run, and then let <i>only</i> the relay heads of a fresh target read from that run. Nothing else gets through. The target still follows the moved pointer just as often. So the relay heads alone carry the pointer from the question to the answer.</p>
+<h2>Relay: how does the pointer reach the answer?</h2>
+<p>The pointer is made at the shape token, but the answer is written several tokens later, at the colon token. Attention heads are the only parts of the VLM that move information between tokens. So some heads at the colon token must reach back to the shape token and fetch the pointer.</p>
+<p>Concretely, we let one head at a time at the colon token read from the source run instead of the target run, and ranked the heads by how often the target switched to <span class="tok">K</span>. The top 16 heads, mostly in layers 19 to 23, carry the pointer. When we let them read one token at a time, they get the pointer mostly from the shape token, where the binding heads left it. We call them <b>relay heads</b>.</p>
+<p>Two more tests tie the steps together. If we stop the relay heads from looking at the question, the target almost always loses its answer. The cleaner test goes the other way. We move the pointer with the binding heads in one run, and then let <i>only</i> the relay heads of a fresh target read from that run. Nothing else gets through, yet the target follows the moved pointer just as often. So the relay heads alone carry the pointer from the question to the answer.</p>
 
-<h2>Gaze: how does the VLM read the panel it points to?</h2>
-<p>At the colon, the VLM now holds a pointer, but the letter is still sitting in the picture. Something has to follow the pointer back and read it. Concretely, we pasted only the query of one head at a time at the colon, and found 32 heads, all in the upper half of the VLM, that send the target to <span class="tok">K</span>. We call them <b>gaze heads</b>, because they decide where the VLM's gaze lands.</p>
-<p>They behave exactly like someone following directions. If we move the pointer with the binding heads but hold the gaze heads fixed, the moved pointer does nothing at all: it only works through them. And if we let the gaze heads look at the source's picture while following the target's pointer, the target reads out the source's letter. Many of these heads are the same ones we found in earlier work, <a href="https://gaze.baulab.info/">Gaze Heads</a>, by watching where a model looks while it narrates a comic.</p>
+<h2>Gaze: how does the VLM read the panel the pointer names?</h2>
+<p>At the colon token, the VLM now holds a pointer, but the letter is still in the picture. Some heads have to follow the pointer back and read it. Concretely, we patched the query of one head at a time at the colon token, and found 32 heads, in layers 19 to 34, that send the target to <span class="tok">K</span>. We call them <b>gaze heads</b>, because they decide where the VLM's gaze lands.</p>
+<p>The pointer reaches the picture only through the gaze heads. If we move the pointer with the binding heads but keep the gaze heads' queries as they were, the moved pointer almost never changes the answer. And if we let the gaze heads read the source's picture while they follow the target's pointer, the target writes the source's letter. Most of these heads are among the <a href="https://gaze.baulab.info/">Gaze Heads</a> of our earlier work, which we found by watching where a model looks while it describes comic strips.</p>
 
 <h2>Do the gaze heads bring back a word, or an idea?</h2>
-<p>When the gaze heads read a panel, do they bring back the word for what they saw, or something more like the idea of it? To test this, we dropped the letters and asked about colored shapes instead, <i>"What shape is the green marker?"</i>, in English, German, French, and Chinese. The VLM always answers in the language of the question.</p>
-<p>The gaze heads don't care about that language. What they bring back looks almost the same for one picture asked in two languages, and very different for two pictures asked in one language. If we paste the gaze heads from a source that asks in French about another picture, the target names the <i>source's</i> shape, but in its <i>own</i> language. So the gaze heads bring back the idea, not the word.</p>
-<p>The language comes from somewhere else. A separate team of 16 <b>language heads</b>, near the top of the VLM, carries the language of the question. Paste them, and the answer switches language while the shape stays the same. The last few layers then put the idea and the language together into the final word.</p>
+<p>When the gaze heads read a panel, do they bring back the word for what they see, or the idea of it? To test this, we dropped the letters and asked about colored shapes instead, <i>"What shape is the green marker?"</i>, in English, German, French, and Chinese. The VLM answers in the language of the question.</p>
+<p>What the gaze heads bring back does not depend on that language. It looks almost the same for one picture asked in two languages, and very different for two pictures asked in one language. If we patch the gaze heads from a source run that asks in French about another picture, the target names the <i>source's</i> shape, but in its <i>own</i> language. So the gaze heads bring back the idea, not the word.</p>
+<p>The language comes from a different set of 16 heads in the upper layers, which we call <b>language heads</b>. Patch them from a source run in another language, and the answer switches language while the shape stays the same. The last MLP layers then join the idea and the language into the final word.</p>
 <figure class="center_image" style="margin-top: 30px">
   <center><img src="images/paper/gaze_language.png" style="width:100%; max-width:900px" alt="Three plots from the paper on gaze heads and language heads."></center>
-  <figcaption><b>Reading and translating are done by different teams.</b> (a) Each square is one attention head at the colon. Darker means pasting that head's query moved the pointer more often. The 32 outlined gaze heads all sit in the upper half, layers 19 to 34. (b) How often the target follows a moved pointer as we include more heads, for our gaze heads and for the Gaze Heads from our earlier work. Our 32 heads do better than that earlier work's top 100, and random heads do nothing. (c) The same kind of map for switching the answer's language. The 16 outlined language heads change the language without changing the shape. <b>One team brings back what is there, another decides how to say it.</b></figcaption>
+  <figcaption><b>Reading and translating are done by different heads.</b> (a) Each square is one attention head at the colon token. Darker means patching that head's query moved the pointer more often. The 32 outlined gaze heads sit in layers 19 to 34. (b) How often the target follows a moved pointer as we patch more heads, for our gaze heads, for the Gaze Heads of our earlier work, and for random heads. Our 32 heads do better than that earlier work's top 100, and random heads do nothing. (c) The same kind of map for switching the answer's language. The 16 outlined language heads change the language without changing the shape. <b>One set of heads brings back what is there, another decides how to say it.</b></figcaption>
 </figure>
 
-<h2>How does the VLM keep its place in a list?</h2>
-<p>So far the VLM gives one answer. Now ask for the letter in <i>each</i> heart. After it writes <span class="tok">E,</span> it has to know that the first heart is done and move on. And since it has no notepad, it has to work this out again from the letters it has already written.</p>
-<p>The only tokens that know what has been written are the letters themselves and the commas after them. So we pasted the comma from a source that had written one letter into a target that had written nothing. Around layers 20 to 21, the target skips a panel it never answered from. The comma carries the VLM's progress.</p>
-<p>But what does that progress look like? It could be a count, <i>"two done"</i>. It could be a list, <i>"panels 2 and 4 done"</i>. Or it could be a place, <i>"done up to panel 4"</i>. We built pairs of pictures where each of these would make the VLM say a different letter. The answer was clear: it is a place. The comma holds a <b>bookmark</b> that says <i>"done up to here"</i>, and the VLM moves on to the next matching panel after it.</p>
-<p>Who sets the bookmark? The same binding heads. At each written letter, they link the letter back to the panel it came from. If we quietly move a written letter one panel to the right in the source picture, the target's next answer also jumps one panel to the right. The binding heads do the same job twice: first they tie the question to the picture, then they tie each answer to the spot it came from.</p>
+<h2>Progress: how does the VLM keep its place in a list?</h2>
+<p>So far the VLM gives one answer. Now ask for the letter inside <i>each</i> heart. After it writes <span class="tok">E</span>, it has to know that the first heart is done and move on. And since it has no notepad, it has to work this out again from the letters it has already written.</p>
+<p>The only tokens that know what has been written are the answer tokens and the comma tokens after them. So we copied the comma token from a source run that had written one letter into a target run that had written nothing. At layers 20 and 21, the target skips a panel it never answered from. It could only have learned that this panel was done from the copied state. So the comma token holds the VLM's progress.</p>
+<p>What form does progress take? It could be a count, <i>"two done"</i>. It could be a set, <i>"panels 2 and 4 done"</i>. Or it could be a place, <i>"done up to panel 4"</i>. We built pairs where each of these makes the target write a different letter. At layers 20 and 21 the answer is clear: progress is a place. It says <i>"done up to here"</i>, and the VLM moves on to the next matching panel after it.</p>
+<p>Where does progress come from? From the same binding heads. At each answer token, they tie the letter just written back to the panel it came from. If we quietly move a written letter one panel to the right in the source picture, and let the binding heads read it there, the target's next answer also moves one panel to the right. So the binding heads do the same job twice. First they tie the question to the picture, then they tie each answer to the panel it came from. The comma token then reads this from the answer token.</p>
 <figure class="center_image" style="margin-top: 30px">
-  <center><img src="images/paper/relay_progress.png" style="width:100%; max-width:900px" alt="Three plots from the paper on relay heads and the comma's bookmark."></center>
-  <figcaption><b>The pointer travels to the answer, and the comma remembers how far the list has gone.</b> (a) The relay heads at the colon, allowed to read only one token at a time. They pick up the pointer mostly from the word <span class="tok">star</span>. (b) Pasting the comma from a source that has written one letter, one layer at a time. At layers 20 and 21 the target skips ahead to its next panel, even though it never answered from the first. (c) A pair built so that a count, a list, and a place each predict a different letter. At layers 20 and 21 the target almost always picks the first match after panel 4: <b>progress is a place in the picture, not a count.</b></figcaption>
+  <center><img src="images/paper/relay_progress.png" style="width:100%; max-width:900px" alt="Three plots from the paper on relay heads and progress at the comma token."></center>
+  <figcaption><b>The pointer travels to the answer, and the comma token holds the progress.</b> (a) The relay heads at the colon token, allowed to read only one token at a time. They pick up the pointer mostly from the shape token, <span class="tok">star</span>. (b) We copy the comma token from a source run that has written one letter, one layer at a time. At layers 20 and 21 the target skips ahead to its next panel, though it never answered from the first. (c) A pair built so that a count, a set, and a place each predict a different letter. At layers 20 and 21 the target almost always picks the first match after panel 4: <b>progress is a place in the picture, not a count.</b></figcaption>
 </figure>
-<p>Last comes the choice of what to read next. We can watch it without pasting anything, just by handing the VLM letters out of order. With only the second heart written, it goes on to the third. With only the last heart written, it goes back for the earliest one it skipped. The rule is simple: take the nearest unread panel after the bookmark, and go back only when nothing is left ahead. When nothing is left at all, the same step tells the VLM to stop.</p>
+
+<h2>Select: how does the VLM choose the next panel?</h2>
+<p>With the matching panels and the progress both at the comma token, the VLM still has to choose which panel comes next. We can watch this choice without any patch, just by writing letters out of order for the VLM. With only the second heart written, it goes on to the third. With the third and then the first written, it goes back for the second. The rule is simple: take the nearest unwritten panel after the progress, and go back only when nothing is left to the right. When nothing is left at all, the same step makes the VLM stop. This choice is made at the comma token, in layers 20 to 25.</p>
 
 <h2>Does this happen on real photos too?</h2>
-<p>A strip of panels is a clean lab, but people ask about real photos. So we asked the VLM ordinary questions about everyday photos, like <i>"What animals are in this image?"</i>. The gaze heads look ahead at the animal the VLM is about to name. If we stop the comma from seeing an animal that was already named, the VLM names it again. Setting the language heads to English turns answers in other languages into English. And the binding, relay, and gaze teams show up in every size of this model we tried, from 2 billion to 32 billion parameters.</p>
+<p>A strip of panels is a clean lab, but people ask about real photos. So we asked the VLM ordinary list questions about everyday photos, like <i>"What animals are in this image?"</i>. At each comma token, the gaze heads look ahead at the animal the VLM is about to name. If we stop the comma token from seeing an animal already named, the VLM names it again. Setting the language heads to their English values turns answers in other languages into English. And the binding, relay, and gaze heads show up in every size of this VLM we tried, from 2 billion to 32 billion parameters.</p>
 
 <h2>What are the limitations?</h2>
-<p>Most of our careful tests use the panel strips, where we control every detail. On photos we can show that the same teams matter, but we can't build pairs that are as clean. We also didn't find a small team that makes the final choice of the next panel. That choice is spread over several layers. We can find it and change it through the comma, but not pin it to a few heads the way we can for the other steps. On the largest model, the binding work is spread over more heads. And the language heads hold up on the middle-sized models, but not on every size.</p>
+<p>Most of our careful tests use the panel strips, where we control every detail. On photos we can show that the same heads matter, but we can't build pairs that are as clean. We also didn't find a small set of heads that does the select step. The choice is spread over layers 20 to 25 of the comma token. We can read it and change it there, but we can't pin it to a few heads the way we can for the other steps. On the largest model, binding is spread over more heads. And the language heads hold up on the middle-sized models, but not on every size.</p>
 <p>For all the experiments, checks, and numbers, see our paper.</p>
 
 <h2>How does this connect to earlier work?</h2>
-<p>Earlier work found pieces of this picture in text-only models. Language models keep track of which thing goes with which detail by tagging each thing with a hidden label and following that label later (Feng and Steinhardt, 2024). They use a similar trick to follow who believes what in a story (Prakash et al., 2026). And they handle lists with <a href="https://openreview.net/forum?id=iPFlJESrsh">filter heads</a> (Sen Sharma et al., 2026), heads that pick out the items of a list that match a rule. Our binding heads do something similar over the panels of a picture.</p>
-<p>In models that see pictures, Assouel et al. (2026) found that the words of a question build an index of matching places in the picture. Our own earlier work on <a href="https://gaze.baulab.info/">Gaze Heads</a> found heads that look at the part of a picture being described, so that turning them turns the description.</p>
-<p>These works explain how a model finds one place that answers a question. Here we show how these parts work together when the answer is a list, and we add the missing piece: how the VLM keeps its place in the picture and chooses what to read next.</p>
+<p>Earlier work found pieces of this plan in text-only models. Language models keep track of which thing goes with which detail by tagging each thing with a hidden label and following that label later (Feng and Steinhardt, 2024). They use a similar trick to follow who believes what in a story (Prakash et al., 2026). And they handle lists with <a href="https://openreview.net/forum?id=iPFlJESrsh">filter heads</a> (Sen Sharma et al., 2026), heads that pick out the items of a list that match a rule. Our binding heads do something similar over the panels of a picture.</p>
+<p>In models that see pictures, Assouel et al. (2026) found that the words of a question build an index of the matching places in the picture. Our own earlier work on <a href="https://gaze.baulab.info/">Gaze Heads</a> found heads that look at the part of a picture being described, so that turning them turns the description.</p>
+<p>These works explain how a model finds one place that answers a question. Here we show how these parts work together when the answer is a list, and we add the missing pieces: how the VLM tracks its progress through the picture and selects what to read next.</p>
 
 
 <h2>How to cite</h2>
