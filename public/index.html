@@ -180,6 +180,10 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 <div class="container">
 <div class="row justify-content-center text-center">
 
+<p class="text-center" style="flex: 0 0 100%; max-width: 100%; margin-bottom: 20px">
+<a href="https://goals.baulab.info/"
+   >Parallel work! See our <b>Goal Encoding in LLMs</b>, where we find a similar plan inside LLMs that write code.</a>
+</p>
 <p>
 <a href="https://arxiv.org/abs/2611.21600" class="d-inline-block p-3 align-top" target="_blank"><img height="100" width="78" src="images/paper-thumb.png" style="border:1px solid; margin: 0 38px;" alt="Paper thumbnail" data-nothumb=""><br>ArXiv<br>Preprint</a>
 <a href="https://github.com/rohitgandikota/vlm-planning" class="d-inline-block p-3 align-top" target="_blank"><img height="100" width="78" src="images/code-thumb.png" style="border:1px solid; margin: 0 38px;" alt="Github code thumbnail" data-nothumb=""><br>Source Code<br>Github</a>
@@ -423,9 +427,19 @@ The VLM uses the same pointers to keep track of what it has already said. Every 
 <h2>Does this happen on real photos too?</h2>
 <p>A strip of panels is a clean lab, but people ask about real photos. So we asked the VLM ordinary list questions about everyday photos, like <i>"What animals are in this image?"</i>. At each comma token, the gaze heads look ahead at the animal the VLM is about to name. If we stop the comma token from seeing an animal already named, the VLM names it again. Setting the language heads to their English values turns answers in other languages into English. And the binding, relay, and gaze heads show up in every size of this VLM we tried, from 2 billion to 32 billion parameters.</p>
 
-<h2>What are the limitations?</h2>
-<p>Most of our careful tests use the panel strips, where we control every detail. On photos we can show that the same heads matter, but we can't build pairs that are as clean. We also didn't find a small set of heads that does the select step. The choice is spread over layers 20 to 25 of the comma token. We can read it and change it there, but we can't pin it to a few heads the way we can for the other steps. On the largest model, binding is spread over more heads. And the language heads hold up on the middle-sized models, but not on every size.</p>
 <p>For all the experiments, checks, and numbers, see our paper.</p>
+
+<h2 id="parallel">Parallel work: does a code LLM plan the same way?</h2>
+<div class="card" style="border-left: 4px solid var(--rose-dark);">
+<div class="card-block">
+<p style="text-indent: -3em; margin-left: 3em;"><a href="https://goals.baulab.info/">Arnab Sen Sharma, Eric Todd, Sheridan Feucht, Andy Arditi, Rohit Gandikota, Natalie Shapira, Gabriele Sarti, Constanza Fierro, Lisa Schut, David Bau. <i>Goal Encoding in LLMs.</i> 2026.</a></p>
+<p>While we studied a VLM that reads pictures, we also ran a parallel project on language models that write code, with no pictures at all. That project asks how a model keeps a goal alive while it writes a long program. The answer it finds has the same shape as the plan on this page.</p>
+<p><b>The next step is set before it is written.</b> In the code LLM, a small set of attention heads, the goal heads, holds the next step a few tokens before the model starts to write it. In the VLM, the binding heads find the panel at the shape token, before any answer is written.</p>
+<p><b>The request is read again, not carried along.</b> The code LLM does not carry its goal forward from token to token. It keeps reading the goal again from the task description. The VLM does the same at every comma token, where it reads the question and the picture again.</p>
+<p><b>Progress picks what comes next.</b> The code LLM compares the goal it has just read with the code written so far, and that picks its next step. The VLM compares the matching panels with its progress, and that picks its next panel.</p>
+<p>The two projects use different models and different tasks: Qwen2.5-Coder-32B and Llama-3.3-70B writing code there, Qwen3-VL-8B reading pictures here. Our hypothesis is that this is a property of transformers themselves. A transformer has a fixed number of layers, so it cannot keep one running state across many written tokens. Reading the request again at every step, and checking it against what is already written, may be how a transformer follows any task with many steps. We have tested this only in these two settings.</p>
+</div><!--card-block-->
+</div><!--card-->
 
 <h2>How does this connect to earlier work?</h2>
 <p>Earlier work found pieces of this plan in text-only models. Language models keep track of which thing goes with which detail by tagging each thing with a hidden label and following that label later (Feng and Steinhardt, 2024). They use a similar trick to follow who believes what in a story (Prakash et al., 2026). And they handle lists with <a href="https://openreview.net/forum?id=iPFlJESrsh">filter heads</a> (Sen Sharma et al., 2026), heads that pick out the items of a list that match a rule. Our binding heads do something similar over the panels of a picture.</p>
