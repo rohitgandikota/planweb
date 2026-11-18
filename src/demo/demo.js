@@ -40,7 +40,8 @@ const HEADS = {
 const COLOR = { binding: [0, 114, 178], gaze: [0, 158, 115] };
 const BRIGHT = { binding: [40, 160, 255], gaze: [0, 235, 160] };   // the same two hues, lighter, for maps drawn over photos
 
-const asset = (p) => new URL(p, import.meta.url).href;
+const ASSETS_VERSION = 2;                // bump when files under images/ or runs/ change, so browsers drop old copies
+const asset = (p) => new URL(p + (p.includes('?') ? '&' : '?') + 'a=' + ASSETS_VERSION, import.meta.url).href;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -504,25 +505,25 @@ export async function start(container, opts = {}) {
   }
   window.__plandemo = { state, run, recordAll, show };
 
-  // ---- start: strips play at once; the model for the photos loads behind them when the browser can run it
+  // ---- start: everything plays at once from recordings; the model for the photos loads behind when the browser can run it
   await choose(index[0].name);
   $('pd-run').disabled = false;
   const STRIPS = 'The strips are recordings of the full-size model.';
-  const recorded = (why) => {
+  const recorded = () => {                 // no model here: every run plays from its recording
     state.live = null;
     $('pd-load').hidden = true;
-    $('pd-note').innerHTML = `<b>${why}</b> You are watching recordings of the same runs.`;
+    $('pd-note').textContent = '';
   };
   const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   let adapter = null;
   try { adapter = opts.recorded || phone ? null : await navigator.gpu?.requestAdapter(); } catch { /* no WebGPU */ }
   if (!adapter) {
-    recorded(phone ? 'The model is too large to run on a phone.' : 'This browser does not support WebGPU, so the model cannot run here.');
+    recorded();
   } else {
     const live = new Live();
     $('pd-load').hidden = false;
     $('pd-loadmsg').textContent = 'Preparing the model for the photos…';
-    $('pd-note').textContent = `${STRIPS} You can play them now. Until the model is ready, photos play as recordings too.`;
+    $('pd-note').textContent = `Until the model is ready, the photos play as recordings. ${STRIPS}`;
     try {
       await live.load((loaded, total) => {
         $('pd-load').querySelector('progress').value = 100 * loaded / total;
@@ -534,7 +535,7 @@ export async function start(container, opts = {}) {
       $('pd-note').textContent = `On photos, the model runs in this browser tab. Nothing is sent to a server. ${STRIPS}`;
     } catch (err) {
       console.error(err);
-      recorded('The model could not start in this browser.');
+      recorded();
     }
   }
 }

@@ -446,7 +446,7 @@ document.getElementById('plandemo-start').addEventListener('click', async functi
   btn.textContent = 'Starting…';
   try {
     // Raise ?v= when demo.js changes, so returning visitors do not get an old copy.
-    var mod = await import('./demo/demo.js?v=7');
+    var mod = await import('./demo/demo.js?v=9');
     btn.parentNode.style.display = 'none';
     await mod.start(document.getElementById('plandemo-body'), { recorded: /[?&]recorded\b/.test(location.search) });
   } catch (e) {
