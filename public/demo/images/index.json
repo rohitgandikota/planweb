@@ -1,0 +1,47 @@
+[
+ {
+  "name": "strip1",
+  "label": "Strip 1",
+  "kind": "strip"
+ },
+ {
+  "name": "strip2",
+  "label": "Strip 2",
+  "kind": "strip"
+ },
+ {
+  "name": "strip3",
+  "label": "Strip 3",
+  "kind": "strip"
+ },
+ {
+  "name": "strip4",
+  "label": "Strip 4",
+  "kind": "strip"
+ },
+ {
+  "name": "strip5",
+  "label": "Strip 5",
+  "kind": "strip"
+ },
+ {
+  "name": "coco_46905",
+  "label": "Photo: cat and dog",
+  "kind": "photo"
+ },
+ {
+  "name": "coco_64359",
+  "label": "Photo: giraffes and zebras",
+  "kind": "photo"
+ },
+ {
+  "name": "coco_35671",
+  "label": "Photo: cow and horses",
+  "kind": "photo"
+ },
+ {
+  "name": "coco_12764",
+  "label": "Photo: dog and kitten",
+  "kind": "photo"
+ }
+]

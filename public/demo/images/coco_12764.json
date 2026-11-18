@@ -1,0 +1,53 @@
+{
+ "name": "coco_12764",
+ "label": "Photo: dog and kitten",
+ "kind": "photo",
+ "file": "coco_12764.jpg",
+ "width": 640,
+ "height": 480,
+ "regions": [
+  {
+   "box": [
+    23.23,
+    74.52,
+    318.39000000000004,
+    462.58
+   ],
+   "name": "dog"
+  },
+  {
+   "box": [
+    377.81,
+    294.19,
+    630.71,
+    455.23
+   ],
+   "name": "cat"
+  }
+ ],
+ "questions": [
+  {
+   "label": "the animals in the photo",
+   "text": "What animals are in this image? List them, separated by commas.",
+   "word": "animals"
+  }
+ ],
+ "credit": {
+  "source": "COCO val2014",
+  "license": "Attribution-NonCommercial License",
+  "url": "http://farm8.staticflickr.com/7020/6810252887_01e3d8e4e6_z.jpg"
+ },
+ "embeds": {
+  "file": "coco_12764.f16.bin",
+  "dims": [
+   300,
+   2048
+  ],
+  "dtype": "float16",
+  "grid_thw": [
+   1,
+   30,
+   40
+  ]
+ }
+}

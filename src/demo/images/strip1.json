@@ -1,0 +1,97 @@
+{
+ "name": "strip1",
+ "label": "Strip 1",
+ "kind": "strip",
+ "file": "strip1.png",
+ "width": 2304,
+ "height": 384,
+ "regions": [
+  {
+   "box": [
+    0,
+    0,
+    384,
+    384
+   ],
+   "name": "heart",
+   "letter": "G"
+  },
+  {
+   "box": [
+    384,
+    0,
+    768,
+    384
+   ],
+   "name": "diamond",
+   "letter": "C"
+  },
+  {
+   "box": [
+    768,
+    0,
+    1152,
+    384
+   ],
+   "name": "heart",
+   "letter": "S"
+  },
+  {
+   "box": [
+    1152,
+    0,
+    1536,
+    384
+   ],
+   "name": "triangle",
+   "letter": "X"
+  },
+  {
+   "box": [
+    1536,
+    0,
+    1920,
+    384
+   ],
+   "name": "triangle",
+   "letter": "Z"
+  },
+  {
+   "box": [
+    1920,
+    0,
+    2304,
+    384
+   ],
+   "name": "triangle",
+   "letter": "A"
+  }
+ ],
+ "questions": [
+  {
+   "label": "the letter inside each heart",
+   "text": "Answer with the letters only, separated by a comma and a space. What is the letter inside each heart?",
+   "word": "heart",
+   "expect": "G, S"
+  },
+  {
+   "label": "the letter inside each diamond",
+   "text": "Answer with the letters only, separated by a comma and a space. What is the letter inside each diamond?",
+   "word": "diamond",
+   "expect": "C"
+  },
+  {
+   "label": "the letter inside each triangle",
+   "text": "Answer with the letters only, separated by a comma and a space. What is the letter inside each triangle?",
+   "word": "triangle",
+   "expect": "X, Z, A"
+  }
+ ],
+ "embeds": {
+  "grid_thw": [
+   1,
+   24,
+   144
+  ]
+ }
+}

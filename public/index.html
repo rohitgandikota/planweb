@@ -191,6 +191,7 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 <p>
 <a href="https://arxiv.org/abs/2611.21600" class="d-inline-block p-3 align-top" target="_blank"><img height="100" width="78" src="images/paper-thumb.png" style="border:1px solid; margin: 0 38px;" alt="Paper thumbnail" data-nothumb=""><br>ArXiv<br>Preprint</a>
 <a href="https://github.com/rohitgandikota/vlm-planning" class="d-inline-block p-3 align-top" target="_blank"><img height="100" width="78" src="images/code-thumb.png" style="border:1px solid; margin: 0 38px;" alt="Github code thumbnail" data-nothumb=""><br>Source Code<br>Github</a>
+<a href="#demo" class="d-inline-block p-3 align-top"><img height="100" width="152" src="images/demo-thumb.png" style="border:1px solid; margin: 0 38px;" alt="Interactive demo thumbnail" data-nothumb=""><br>Interactive<br>Demo</a>
 </p>
 
 <div class="card" style="max-width: 1020px;">
@@ -429,6 +430,37 @@ The VLM uses the same pointers to keep track of what it has already said. Every 
 
 <h2>Does this happen on real photos too?</h2>
 <p>A strip of panels is a clean lab, but people ask about real photos. So we asked the VLM ordinary list questions about everyday photos, like <i>"What animals are in this image?"</i>. At each comma token, the gaze heads look ahead at the animal the VLM is about to name. If we stop the comma token from seeing an animal already named, the VLM names it again. Setting the language heads to their English values turns answers in other languages into English. And the binding, relay, and gaze heads show up in every size of this VLM we tried, from 2 billion to 32 billion parameters.</p>
+
+<h2 id="demo">Try it yourself: watch a VLM plan in your browser</h2>
+<div class="card" style="max-width: 1020px; margin: 10px auto;">
+<div class="card-block" id="plandemo-body">
+<p>Pick an image and a question, and watch the 2 billion parameter version of the VLM answer one token at a time. At the shape word, the page draws where the <b style="color:var(--bind)">binding heads</b> look. Before each token of the answer, it draws where the <b style="color:var(--gaze)">gaze heads</b> look. Watch the gaze heads move to the next panel, or the next animal, before the VLM writes it.</p>
+<p id="plandemo-note" style="color:#666; font-size: 14px;">On the photos, the VLM runs in your browser. This downloads about 1.2&nbsp;GB of model weights once, and needs a browser with WebGPU, such as a recent Chrome or Edge on a laptop or desktop. In other browsers the page plays recordings of the same runs. The strips of panels are recordings of the full-size model, and play at once.</p>
+<p style="text-align:center;"><button id="plandemo-start" style="padding: 10px 26px; font-size: 17px; border-radius: 8px; border: 1.5px solid #0072B2; background: #0072B2; color: white; cursor: pointer;">&#9654;&nbsp; Start demo</button></p>
+</div>
+</div>
+<script>
+document.getElementById('plandemo-start').addEventListener('click', async function () {
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+  try {
+    // Raise ?v= when demo.js changes, so returning visitors do not get an old copy.
+    var mod = await import('./demo/demo.js?v=7');
+    btn.parentNode.style.display = 'none';
+    await mod.start(document.getElementById('plandemo-body'), { recorded: /[?&]recorded\b/.test(location.search) });
+  } catch (e) {
+    btn.parentNode.style.display = '';
+    btn.disabled = false;
+    btn.textContent = '▶  Start demo';
+    var p = document.createElement('p');
+    p.style.cssText = 'color:#a33; font-size: 14px;';
+    p.textContent = 'The demo failed to start: ' + e.message;
+    btn.parentNode.parentNode.appendChild(p);
+    console.error(e);
+  }
+});
+</script>
 
 <p>For all the experiments, checks, and numbers, see our paper.</p>
 

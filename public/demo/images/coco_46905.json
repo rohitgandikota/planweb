@@ -1,0 +1,62 @@
+{
+ "name": "coco_46905",
+ "label": "Photo: cat and dog",
+ "kind": "photo",
+ "file": "coco_46905.jpg",
+ "width": 640,
+ "height": 521,
+ "regions": [
+  {
+   "box": [
+    326.28,
+    137.71,
+    618.88,
+    420.83000000000004
+   ],
+   "name": "dog"
+  },
+  {
+   "box": [
+    234.31,
+    163.78,
+    272.51,
+    316.99
+   ],
+   "name": "dog"
+  },
+  {
+   "box": [
+    7.02,
+    132.3,
+    207.23000000000002,
+    416.8
+   ],
+   "name": "cat"
+  }
+ ],
+ "questions": [
+  {
+   "label": "the animals in the photo",
+   "text": "What animals are in this image? List them, separated by commas.",
+   "word": "animals"
+  }
+ ],
+ "credit": {
+  "source": "COCO val2014",
+  "license": "Attribution-NonCommercial License",
+  "url": "http://farm6.staticflickr.com/5219/5494191989_6abcb4091f_z.jpg"
+ },
+ "embeds": {
+  "file": "coco_46905.f16.bin",
+  "dims": [
+   320,
+   2048
+  ],
+  "dtype": "float16",
+  "grid_thw": [
+   1,
+   32,
+   40
+  ]
+ }
+}

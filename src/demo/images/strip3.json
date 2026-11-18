@@ -1,0 +1,97 @@
+{
+ "name": "strip3",
+ "label": "Strip 3",
+ "kind": "strip",
+ "file": "strip3.png",
+ "width": 2304,
+ "height": 384,
+ "regions": [
+  {
+   "box": [
+    0,
+    0,
+    384,
+    384
+   ],
+   "name": "heart",
+   "letter": "Y"
+  },
+  {
+   "box": [
+    384,
+    0,
+    768,
+    384
+   ],
+   "name": "star",
+   "letter": "E"
+  },
+  {
+   "box": [
+    768,
+    0,
+    1152,
+    384
+   ],
+   "name": "heart",
+   "letter": "U"
+  },
+  {
+   "box": [
+    1152,
+    0,
+    1536,
+    384
+   ],
+   "name": "star",
+   "letter": "T"
+  },
+  {
+   "box": [
+    1536,
+    0,
+    1920,
+    384
+   ],
+   "name": "triangle",
+   "letter": "A"
+  },
+  {
+   "box": [
+    1920,
+    0,
+    2304,
+    384
+   ],
+   "name": "triangle",
+   "letter": "N"
+  }
+ ],
+ "questions": [
+  {
+   "label": "the letter inside each heart",
+   "text": "Answer with the letters only, separated by a comma and a space. What is the letter inside each heart?",
+   "word": "heart",
+   "expect": "Y, U"
+  },
+  {
+   "label": "the letter inside each star",
+   "text": "Answer with the letters only, separated by a comma and a space. What is the letter inside each star?",
+   "word": "star",
+   "expect": "E, T"
+  },
+  {
+   "label": "the letter inside each triangle",
+   "text": "Answer with the letters only, separated by a comma and a space. What is the letter inside each triangle?",
+   "word": "triangle",
+   "expect": "A, N"
+  }
+ ],
+ "embeds": {
+  "grid_thw": [
+   1,
+   24,
+   144
+  ]
+ }
+}

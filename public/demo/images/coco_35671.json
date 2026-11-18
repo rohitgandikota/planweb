@@ -1,0 +1,71 @@
+{
+ "name": "coco_35671",
+ "label": "Photo: cow and horses",
+ "kind": "photo",
+ "file": "coco_35671.jpg",
+ "width": 427,
+ "height": 640,
+ "regions": [
+  {
+   "box": [
+    341.08,
+    371.47,
+    389.64,
+    456.40000000000003
+   ],
+   "name": "horse"
+  },
+  {
+   "box": [
+    237.84,
+    376.94,
+    299.82,
+    490.81
+   ],
+   "name": "horse"
+  },
+  {
+   "box": [
+    312.84,
+    344.6,
+    362.48999999999995,
+    432.86
+   ],
+   "name": "horse"
+  },
+  {
+   "box": [
+    96.52,
+    396.03,
+    227.52999999999997,
+    485.08
+   ],
+   "name": "cow"
+  }
+ ],
+ "questions": [
+  {
+   "label": "the animals in the photo",
+   "text": "What animals are in this image? List them, separated by commas.",
+   "word": "animals"
+  }
+ ],
+ "credit": {
+  "source": "COCO val2014",
+  "license": "Attribution-NonCommercial-ShareAlike License",
+  "url": "http://farm8.staticflickr.com/7219/6994910884_a7b9598642_z.jpg"
+ },
+ "embeds": {
+  "file": "coco_35671.f16.bin",
+  "dims": [
+   260,
+   2048
+  ],
+  "dtype": "float16",
+  "grid_thw": [
+   1,
+   40,
+   26
+  ]
+ }
+}

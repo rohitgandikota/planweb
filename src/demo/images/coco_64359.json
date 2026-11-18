@@ -1,0 +1,98 @@
+{
+ "name": "coco_64359",
+ "label": "Photo: giraffes and zebras",
+ "kind": "photo",
+ "file": "coco_64359.jpg",
+ "width": 500,
+ "height": 332,
+ "regions": [
+  {
+   "box": [
+    367.23,
+    153.33,
+    500,
+    251.84000000000003
+   ],
+   "name": "zebra"
+  },
+  {
+   "box": [
+    214.1,
+    114.07,
+    346.95,
+    241.01
+   ],
+   "name": "zebra"
+  },
+  {
+   "box": [
+    144.25,
+    124.36,
+    230.4,
+    205.03
+   ],
+   "name": "zebra"
+  },
+  {
+   "box": [
+    274.05,
+    13.77,
+    399.84000000000003,
+    150.09
+   ],
+   "name": "giraffe"
+  },
+  {
+   "box": [
+    194.72,
+    0,
+    309.62,
+    143.24
+   ],
+   "name": "giraffe"
+  },
+  {
+   "box": [
+    108.18,
+    3.73,
+    217.11,
+    151.45
+   ],
+   "name": "giraffe"
+  },
+  {
+   "box": [
+    460.16,
+    25.27,
+    499.82000000000005,
+    160.77
+   ],
+   "name": "giraffe"
+  }
+ ],
+ "questions": [
+  {
+   "label": "the animals in the photo",
+   "text": "What animals are in this image? List them, separated by commas.",
+   "word": "animals"
+  }
+ ],
+ "credit": {
+  "source": "COCO val2014",
+  "license": "Attribution-NonCommercial-ShareAlike License",
+  "url": "http://farm1.staticflickr.com/89/252310217_a5102fb244_z.jpg"
+ },
+ "embeds": {
+  "file": "coco_64359.f16.bin",
+  "dims": [
+   160,
+   2048
+  ],
+  "dtype": "float16",
+  "grid_thw": [
+   1,
+   20,
+   32
+  ]
+ }
+}
