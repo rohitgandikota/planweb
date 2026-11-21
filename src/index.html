@@ -52,6 +52,7 @@ a { color: var(--rose-dark); }
 .pair { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 0.8rem 1rem; align-items: center; max-width: 30rem; margin: 0 auto; }
 .pair .lab { font-weight: 700; color: var(--muted); }
 .pair .prompt { text-align: left; margin-top: 0.3rem; }
+.pair .patch-arrow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -0.2rem 0; color: var(--rose-dark); font-size: 13px; font-style: italic; }
 .outcomes { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.6rem; margin-top: 1.2rem; }
 .outcomes div { border: 1px solid #ddd; border-radius: 6px; padding: 0.55rem 0.7rem; font-size: 0.9rem; line-height: 1.4; }
 .outcomes .L { font-family: 'JetBrains Mono', Menlo, monospace; font-size: 1.2rem; display: block; color: var(--rose-dark); font-weight: 700; }
@@ -158,6 +159,34 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 .primer-body .controls button.head-toggle { border-color: var(--hc); color: var(--hc); }
 .primer-body .controls button.head-toggle[aria-pressed="true"] { background: var(--hc); color: #fff; }
 .primer-body .say { min-height: 4.5em; font-size: 15px; line-height: 1.55; }
+.xp-grid { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(250px, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .xp-grid { grid-template-columns: minmax(0, 1fr); } }
+.xp-stage { display: grid; overflow: hidden; background: #fff; border: 1px solid #eee; border-radius: 6px; }
+.xp-view { grid-area: 1 / 1; display: none; align-items: center; will-change: transform, opacity; }
+.xp-view.on, .xp-view.leaving { display: flex; }
+.xp-stage { transition: height 0.6s cubic-bezier(.45,0,.25,1); }
+.xp-view svg { display: block; width: 100%; height: auto; }
+.xp-side { position: sticky; top: 12px; }
+.xp-map-head { font-size: 12.5px; color: #777; margin: 0 0 6px; }
+.xp-map button { display: block; width: fit-content; max-width: 100%; text-align: left; background: #fff; border: 1px solid #e2bccb; border-radius: 999px; padding: 3px 12px 3px 10px; margin: 0 0 5px; font: 600 13px 'Open Sans', sans-serif; color: var(--rose-dark); cursor: pointer; box-shadow: 0 1px 2px rgba(140,59,90,0.12); }
+.xp-map button::after { content: "\203A"; margin-left: 7px; font-weight: 700; }
+.xp-map button:hover { background: #fbeef3; border-color: var(--rose-dark); }
+.xp-map button.on { background: var(--rose-dark); border-color: var(--rose-dark); color: #fff; }
+.xp-map button.on::after { content: ""; margin: 0; }
+.xp-title { font-size: 17px; font-weight: 700; margin: 14px 0 6px; color: var(--rose-ink); }
+.primer-body .xp-side .say { min-height: 10em; }
+.primer-body .xp-side .controls { justify-content: flex-start; align-items: center; }
+.xp-count { font-size: 13px; color: #888; margin-left: 4px; }
+.mech { margin: 1.2rem 0 1.4rem; padding: 0; }
+.mech .xp-stage { display: block; }
+.mech .xp-stage svg { display: block; width: 100%; height: auto; }
+.mech .xp-side .say { min-height: 8em; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+.plan-back { display: flex; justify-content: center; margin: 1.6rem 0 0.4rem; }
+.plan-back a { font: 600 15px 'Open Sans', sans-serif; border: 1px solid var(--rose-dark); color: var(--rose-dark); background: #fff; border-radius: 999px; padding: 6px 18px; text-decoration: none; }
+.plan-back a:hover { background: var(--rose-dark); color: #fff; }
+.xp-click { cursor: pointer; }
+.xp-click:hover { filter: brightness(0.94); }
 .mlp-box { transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: no-preference) { .mlp-box.pulse { animation: mlp-pulse 0.9s ease-in-out infinite; } }
 @keyframes mlp-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
@@ -196,15 +225,18 @@ details.primer > summary:focus-visible { outline: 2px solid var(--bind); outline
 
 <div class="card" style="max-width: 1020px;">
 <div class="card-block">
-<h3>How does a VLM decide what to describe first, what to describe next, and when to stop?</h3>
+<h3>What is a &ldquo;Plan&rdquo; in Transformers?</h3>
 <p>
-A <b>vision-language model</b>, or <b>VLM</b>, looks at a picture and answers questions about it in words. Ask one what animals are in a photo, and it names them one at a time: a dog, then a cat, then a horse. It rarely names the same animal twice, and it rarely skips one. Yet a picture has no reading order. Nothing in a photo says the dog comes before the cat. So something inside the VLM must decide what to describe next, and keep track of what it has already said.
+The word <i>plan</i> can mean many things. We do not mean the reasoning a model writes out before it answers. We mean the order of steps it works out &ldquo;in its brain&rdquo;, before it writes a single token.
 </p>
 <p>
-We opened up a VLM and traced how it does this. We find that the VLM <b>plans on the image itself</b>. To answer a question, it does not look up the answer directly. It first finds <i>where</i> the answer is in the image, and keeps a pointer to that place. It passes this pointer along to the token where the answer will be written. There, a separate set of attention heads follows the pointer back to the image and fetches what is there.
+When a <b>vision-language model</b> (VLM) is asked to caption an image, it names one object at a time, and it almost never names the same object twice. We study how the model is able to do this. We find a human readable plan inside the model&rsquo;s computations.
 </p>
 <p>
-The VLM uses the same pointers to keep track of what it has already said. Every answer it writes, it ties back to the place in the image the answer came from. Before it writes the next answer, it looks back at these places to see how far it has come, and moves on to the nearest place it has not described yet. So the plan is not a list of words kept somewhere inside the VLM. It is a set of pointers into the image, and the VLM reads them again at every step, much like notes on a whiteboard.
+Our main finding: the model plans in the language of <b>pointers</b> to the image. It solves the task early, as soon as it reads the user&rsquo;s question. But instead of reading the answer, it writes down the location in the image where the answer is. It then keeps passing these pointers along to the tokens where it actually needs to answer. Only then does it fetch the answer, looking back at the image.
+</p>
+<p>
+Surprisingly, the model also keeps track of its <b>progress</b> as a pointer to the image. As soon as it writes an answer, it marks the region of the image it has already answered from, so that it never goes back to describe that region again.
 </p>
 </div><!--card-block-->
 </div><!--card-->
@@ -216,76 +248,97 @@ The VLM uses the same pointers to keep track of what it has already said. Every 
 
 
 
-<h2>How does a VLM read a picture and a question?</h2>
-<p>You give a VLM a picture and a question, and it writes an answer in words. Inside, it chops the picture and the question into small pieces called <b>tokens</b> and passes them up a stack of 36 <b>layers</b>. Small parts called <b>attention heads</b> let each token pull in information from the tokens before it. That is all you need to follow along. If you want to see how it works, the primers below zoom in one level at a time: the transformer block, the attention inside it, one attention head, and how a picture becomes tokens.</p>
+<h2>How does a VLM work?</h2>
+<p>A VLM has two main networks: a <b>vision encoder</b> and a <b>language model</b>. The image is cut into small patches, and the vision encoder turns them into <b>tokens</b>. The question is split into text tokens too. The image tokens and the text tokens are joined into one row, and the language model passes this row through a stack of 36 <b>layers</b>. Each layer has an <b>attention</b> block and an <b>MLP</b>. Inside each attention block, many <b>attention heads</b> work side by side.</p>
+<p>The language model writes its answer one token at a time. Attention is the only place where a token can read what was computed at the tokens before it. Earlier tokens cannot look forward to later ones. The primer below opens each part, one level at a time.</p>
 
-<details class="primer" id="primer-transformer">
-<summary>Primer 1: what is a transformer block?</summary>
+<details class="primer" id="primer-explorer">
+<summary>Primer: VLM, language model, transformer block, attention, MLP</summary>
 <div class="primer-body">
-<p>Almost every modern language model, VLMs included, is a <b>transformer</b>. It reads text as a row of <b>tokens</b>, small word pieces. Each token carries a running note of everything the VLM knows about it so far. This note is called the <b>residual stream</b>, and you can picture it as a straight line running up through the VLM.</p>
-<div class="stage"><svg id="block-svg" viewBox="0 0 900 362" role="img" aria-label="The simplest transformer block: a residual stream line with an attention step and an MLP step that each read from the line and add back to it"></svg></div>
-<p style="margin-top: 0.8rem">This is the simplest <b>transformer block</b>. It does two things, in order. <b>Attention</b> reads the stream, pulls in information from <i>other</i> tokens, and adds it back. Then the <b>MLP</b> reads the stream and works on <i>this</i> token alone, and adds its result back too. A model is just many of these blocks stacked on top of each other. Ours has 36, which we call its <b>layers</b>.</p>
-<p>Here is a whole sentence going through two blocks. We follow the last token.</p>
-<div class="stage"><svg id="tf-svg" viewBox="0 0 900 668" role="img" aria-label="A sentence of five tokens; the last token goes through two transformer blocks, each with attention and an MLP added to its residual stream"></svg></div>
-<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
-<div class="say" aria-live="polite"></div>
+<div class="xp-grid">
+<div class="xp-stage">
+<div class="xp-view" data-view="overview"><svg id="ov-svg" viewBox="0 0 900 560" role="img" aria-label="An image goes through the vision encoder and becomes image tokens; the question becomes text tokens; the row goes up the language model, and each generated token is added to the end of the row"></svg></div>
+<div class="xp-view" data-view="stack"><svg id="stack-svg" viewBox="0 0 900 560" role="img" aria-label="The language model as a stack of 36 layers, with one residual stream per token running up through all of them"></svg></div>
+<div class="xp-view" data-view="block"><svg id="tf-svg" viewBox="0 0 900 668" role="img" aria-label="A sentence of five tokens; the last token goes through two transformer blocks, each with attention and an MLP added to its residual stream"></svg></div>
+<div class="xp-view" data-view="attention"><svg id="in-svg" viewBox="0 0 900 420" role="img" aria-label="The attention box opens up into several attention heads, each looking at a different earlier word"></svg></div>
+<div class="xp-view" data-view="head"><svg id="att-svg" viewBox="0 0 900 490" role="img" aria-label="One attention head at the word it, comparing its query with the keys of earlier words and copying the value of the best match"></svg></div>
+<div class="xp-view" data-view="mlp"><svg id="mlp-svg" viewBox="0 0 900 480" role="img" aria-label="Inside the MLP: the stream of one token fans out to a wide layer and fans back in, and the result is added to the stream"></svg></div>
 </div>
-</details>
-
-<details class="primer" id="primer-inside">
-<summary>Primer 2: what is inside attention?</summary>
-<div class="primer-body">
-<p>Zoom in one level: open the attention box from the transformer block.</p>
-<div class="stage"><svg id="in-svg" viewBox="0 0 900 420" role="img" aria-label="The attention box opens up into several attention heads, each looking at a different earlier word"></svg></div>
-<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+<aside class="xp-side">
+<div class="xp-map-head">Click any part to open it:</div>
+<div class="xp-map" role="navigation" aria-label="Parts of the VLM"></div>
+<div class="xp-title"></div>
 <div class="say" aria-live="polite"></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button><span class="xp-count"></span></div>
+</aside>
 </div>
-</details>
-
-<details class="primer" id="primer-attention">
-<summary>Primer 3: what happens inside one attention head?</summary>
-<div class="primer-body">
-<p>Zoom in one more level: open a single attention head. Each head does a small search over the earlier tokens, using three things: a <b>query</b>, <b>keys</b>, and <b>values</b>. Click through to follow one head at the word <span class="tok">it</span>, step by step.</p>
-<div class="stage"><svg id="att-svg" viewBox="0 0 900 490" role="img" aria-label="One attention head at the word it, comparing its query with the keys of earlier words and copying the value of the best match"></svg></div>
-<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
-<div class="say" aria-live="polite"></div>
-</div>
-</details>
-
-<details class="primer" id="primer-vlm">
-<summary>Primer 4: how does a VLM read a picture?</summary>
-<div class="primer-body">
-<p>Everything so far was about words. Here is how a picture gets in.</p>
-<div class="stage"><svg id="vlm-svg" viewBox="0 0 1040 370" role="img" aria-label="A picture is cut into squares; each square becomes a token placed between image start and image end tokens, followed by the words; the language model reads the row and writes the answer"></svg></div>
-<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
-<div class="say" aria-live="polite"></div>
 </div>
 </details>
 
 
 
 
-<p>One more fact matters for this story. A VLM writes its answer one token at a time, and every new token goes up the whole stack of layers again. The VLM has no notepad. It can't write down "I already said dog" and check it later. Each time it starts a new word, it has to work out again, from the words it has already written, what is left to say.</p>
-<p class="question">So how does a VLM pick the next thing to describe, and how does it keep track of what it has already described?</p>
+<p>A VLM writes its answer one token at a time, and every new token passes through the whole stack again. It has no notepad to write "I already said dog", so it must recompute at every token what is left to say from the tokens it has already written.</p>
+<p class="question">How does a VLM choose the next thing to describe, and how does it keep track of what it has already described?</p>
 
-<h2>Why do we study a strip of panels instead of photos?</h2>
-<p>Photos are messy. We can't control which objects the VLM will mention, or in what order, so it is hard to test anything cleanly. So we built a simple puzzle where we control everything. Each picture is a <b>strip of panels</b>. Each panel holds one shape with a letter inside it. We ask the VLM for the letter inside a named shape, and we start its reply with <i>"Answer:"</i> so that the next token it writes is the letter.</p>
+<h2>The secret ingredient: the task setup</h2>
+<p>If you read through many works in mechanistic interpretability, one ingredient behind their success is the choice of task. A good task puts the model in a controlled setup, where we can poke at it and take it apart.</p>
+<p>For our questions, we design a synthetic task. The VLM gets a single image that looks like a comic strip. The image has several panels, and each panel holds a shape and a letter. We ask for the letter inside a named shape, and we start the reply with <i>"Answer:"</i> so that the next token the model generates is the letter.</p>
 <div class="demo">
   <div class="strip" style="--n:4" data-strip="plus:R star:T heart:P circle:K" data-hit="1"></div>
   <div class="prompt">What is the letter inside the star? &nbsp;Answer: <span class="ans">T</span></div>
 </div>
-<p>We ask about a shape, not about "panel 2", on purpose. To answer, the VLM first has to find where the star is, and only then read the letter there. That gives us two separate jobs to look for inside the VLM: finding the place, and reading it.</p>
-<p>Three tokens of this puzzle matter for everything that follows, so we give them names. The <b>shape token</b> is the word that names the shape, <span class="tok">star</span>. The <b>colon token</b> is the <span class="tok">:</span> after "Answer", the last token before the VLM writes its answer. The <b>answer token</b> is the letter it writes, <span class="tok">T</span>.</p>
-<p>The puzzle also has a list version. When the same shape sits in several panels, we ask for the letter inside <i>each</i> heart, and the VLM lists the letters from left to right. After each letter it writes a comma, and the <b>comma token</b> is where it writes the next letter from. This is where it has to remember what it has already written.</p>
+<p>Instead of a single answer, we can also ask for several answers by changing the image. When the asked shape sits in several panels, the model lists the letters from left to right, separated by commas.</p>
 <div class="demo">
   <div class="strip" style="--n:6" data-strip="heart:E diamond:M heart:U diamond:V heart:P heart:A" data-hit="0 2 4 5"></div>
   <div class="prompt">What is the letter inside each heart? &nbsp;Answer: <span class="ans">E, U, P, A</span></div>
 </div>
-<p>Later, we check that what we find on these strips also happens on real photos.</p>
+<p>To keep the rest of the page simple, we name four tokens:</p>
+<ul>
+  <li>The <b>shape token</b> is the word that names the shape, <span class="tok">star</span>.</li>
+  <li>The <b>colon token</b> is the <span class="tok">:</span> after "Answer", the last token before the model generates its answer.</li>
+  <li>The <b>answer token</b> is the letter the model generates, <span class="tok">T</span>.</li>
+  <li>The <b>comma token</b> is the <span class="tok">,</span> after each letter in a list. The model generates the next letter there.</li>
+</ul>
+<p>This task is our secret ingredient. An open-ended description does not let us control which objects the model describes or in what order. Here, we control every detail. The question names a panel by its shape instead of its number, so the model must first find where the star is, and only then read the letter. This separates two jobs we can look for inside the model: finding the panel, and reading it. We later test how much of the mechanism carries over to natural photos.</p>
 
-<h2>What is the plan?</h2>
-<p>Here is what we found, in one picture, before we show how we found it. Two ideas carry the whole story. A <b>pointer</b> is a note inside the VLM that says which panel to look at, like <i>"look in panel 2"</i>, without saying yet what is there. <b>Progress</b> is a note that says how far the list has come, like <i>"done up to panel 3"</i>.</p>
-<p>The VLM makes and uses these notes in a few steps, and each step runs through a small set of attention heads. In <b>Bind</b>, the <b>binding heads</b> at the shape token match the shape against the picture and make a pointer to every matching panel. In <b>Relay</b>, the <b>relay heads</b> carry that pointer to the token where the answer is written. In <b>Gaze</b>, the <b>gaze heads</b> follow the pointer back to the picture and read the letter. A list adds two more steps. In <b>Progress</b>, the same binding heads tie each written letter to the panel it came from, and the comma token picks this up as progress. In <b>Select</b>, the VLM takes the nearest matching panel after the progress, or stops.</p>
+<h2>How do we investigate the VLM?</h2>
+<p><b>Activation patching</b> copies one internal state from one run of the model into a second run, and measures how the answer changes.</p>
+<p>Every experiment pairs two runs that differ in both the image and the question. The <b>source run</b> asks for the heart in one image, and the <b>target run</b> asks for the star in another. We copy one activation of the source run into the target run, at one token and one layer, and leave everything else in the target run unchanged.</p>
+<details class="primer" id="primer-patching">
+<summary>Primer: what is activation patching?</summary>
+<div class="primer-body">
+<p>Click through to see one patch.</p>
+<div class="stage"><svg id="pp-svg" viewBox="0 0 900 400" role="img" aria-label="Two runs of the VLM; a state saved from the source run is copied into the target run at the same layer, and the target's answer changes"></svg></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+<div class="say" aria-live="polite"></div>
+
+</div>
+</details>
+
+<div class="demo">
+<h3>Why is our task setup important?</h3>
+<div class="pair">
+  <span class="lab">Source</span>
+  <div><div class="strip" style="--n:4" data-strip="star:G circle:C plus:Z heart:D" data-hit="3"></div><div class="prompt">...inside the heart? &nbsp;<span class="ans">D</span></div></div>
+  <span></span>
+  <div class="patch-arrow"><svg width="26" height="40" viewBox="0 0 26 40" aria-hidden="true"><path d="M13 3 C 4 12, 13 21, 13 34.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7.5 29.5 L13 35.5 L18.5 29.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>patch one state</span></div>
+  <span class="lab">Target</span>
+  <div><div class="strip" style="--n:4" data-strip="plus:R star:T heart:P circle:K" data-hit="1"></div><div class="prompt">...inside the star? &nbsp;<span class="ans">T</span></div></div>
+</div>
+<p style="margin-top: 1rem">We design the inputs so that each kind of information a patch could move leads the target to generate a different letter. The letter the target generates then tells us what the patched state carried. Here, the source's heart sits in panel 4, and the target's star sits in panel 2. Each letter the target could generate means something different:</p>
+<div class="outcomes">
+  <div><span class="L">T</span>No effect: the patch changed nothing.</div>
+  <div><span class="L">D</span>Shallow copy: the patch copied the source's answer.</div>
+  <div><span class="L">K</span>Resolved pointer: the patch moved the source's pointer, "look in panel 4", and the target read panel 4 of its own image.</div>
+  <div><span class="L">P</span>Request: the patch moved the source's request, "find the heart", which the target resolved on its own image.</div>
+  <div><span class="L">R</span>Layout: the patch moved the source's layout, on which the target resolved its own request for the star.</div>
+</div>
+<p>Whenever we patch a set of heads, we also patch the same number of random heads from the same layers as a control. If the random heads do nothing, the effect belongs to the heads we found.</p>
+</div>
+
+<h2>An overview of the plan</h2>
+<p>Every step of the plan works with <b>pointers</b>. A pointer is the location of a panel, such as <i>"look in panel 2"</i>, before the model has read what is there. At the shape token, <b>binding heads</b> match the requested shape against the image and resolve a pointer to every matching panel (<b>Bind</b>). <b>Relay heads</b> then carry the pointer to the token where the answer is generated (<b>Relay</b>). <b>Gaze heads</b> execute the pointer, following it back to its panel to read the letter (<b>Gaze</b>). For a list, the same binding heads bind each written answer to the panel it came from. The comma token keeps these pointers as the model's <b>progress</b>, the panels it has already answered from (<b>Progress</b>). The model then selects the nearest matching panel after its progress, or stops (<b>Select</b>). Each step runs through a small set of attention heads.</p>
 <p>Click through the steps below. Each column is one token, drawn as its stack of 36 layers.</p>
 <figure id="plan" aria-label="Interactive walk-through of the plan">
 <div class="pv-card">
@@ -306,12 +359,12 @@ The VLM uses the same pointers to keep track of what it has already said. Every 
     &nbsp;&nbsp; <svg width="23" height="23" viewBox="-11.5 -11.5 23 23" aria-hidden="true"><circle r="10" fill="#fff" stroke="#009E73" stroke-width="2"/><text y="4.6" text-anchor="middle" font-family="JetBrains Mono, Menlo, monospace" font-size="13" font-weight="700">E</text></svg> the letter read there
     &nbsp;&nbsp; Each dot is one attention head at its layer. Click a dot to see where it looks.</p>
 </div>
-<figcaption>The dots, curves, arrows, and percentages come from recorded runs of Qwen3-VL-8B, the VLM we study. The small pictures that slide between the tokens are our drawing of what each step carries, which the experiments below test one at a time.</figcaption>
+<figcaption>The dots, curves, arrows, and percentages are measured on recorded runs of Qwen3-VL-8B, the model we study. The small pictures that slide between the tokens are our drawing of what each step carries. The experiments below test each step.</figcaption>
 
 <details class="primer">
 <summary>Look at any head</summary>
 <div class="primer-body">
-<p class="pv-note" style="margin:0 0 8px">Pick a group, then a head. The picture shows where that head looks, and the bars show which text tokens it reads.</p>
+<p class="pv-note" style="margin:0 0 8px">Pick a set of heads, then one head. The image shows where that head looks, and the bars show which text tokens it reads.</p>
 <div class="pv-heads">
   <div class="pv-card">
     <div class="pv-tabs" id="pv-tabs"></div>
@@ -344,92 +397,115 @@ The VLM uses the same pointers to keep track of what it has already said. Every 
 <details class="primer">
 <summary>Test the plan: guess the letter before you look</summary>
 <div class="primer-body">
-<p class="pv-note" style="margin:0 0 4px">Here we copy one internal state from one run of the VLM, the <b>source run</b>, into another, the <b>target run</b>. This copy is called a patch, and the sections below explain it. Guess the letter the target writes, then check: it tells us what the copied state carried.</p>
+<p class="pv-note" style="margin:0 0 4px">Each test copies one internal state from one run of the model, the <b>source run</b>, into another, the <b>target run</b>. This copy is the patch from the previous section. Guess the letter the target generates before you look. The letter shows what the copied state carried.</p>
 <div class="pv-pair" id="pv-pair"></div>
 <div class="pv-patches" id="pv-patches"></div>
 </div>
 </details>
 </figure>
 
-<h2>How can we tell what the VLM is thinking?</h2>
-<p>We can't ask the VLM what it is thinking. But we can do something better. We can run the VLM twice, copy one internal state from the first run into the second, and see how the answer changes. This is called <b>activation patching</b>.</p>
-<p>Concretely, the <b>source run</b> asks for the heart in one picture, and the <b>target run</b> asks for the star in a different picture. We copy one state of the source run into the target run, at the same token and the same layer, and leave everything else alone. Then we read the letter the target writes. We build the two pictures so that each kind of information the copied state could carry makes the target write a different letter. So the letter tells us what the state carried.</p>
-<details class="primer" id="primer-patching">
-<summary>Primer: what is activation patching?</summary>
-<div class="primer-body">
-<p>Activation patching is how we test what a piece of the VLM's work contains. Click through to see one patch.</p>
-<div class="stage"><svg id="pp-svg" viewBox="0 0 900 400" role="img" aria-label="Two runs of the VLM; a state saved from the source run is copied into the target run at the same layer, and the target's answer changes"></svg></div>
-<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
-<div class="say" aria-live="polite"></div>
+<p class="pv-note" style="text-align:center">Feel free to come back to this figure once you have read the rest of the page.</p>
 
-</div>
-</details>
-
-<div class="demo">
-<h3>Why does one letter tell us so much?</h3>
-<p>This only works if the letter tells us what the copied state carried. So we build every pair of puzzles so that each kind of information leads the target to a different letter.</p>
-<div class="pair">
-  <span class="lab">Source</span>
-  <div><div class="strip" style="--n:4" data-strip="star:G circle:C plus:Z heart:D" data-hit="3"></div><div class="prompt">...inside the heart? &nbsp;<span class="ans">D</span></div></div>
-  <span class="lab">Target</span>
-  <div><div class="strip" style="--n:4" data-strip="plus:R star:T heart:P circle:K" data-hit="1"></div><div class="prompt">...inside the star? &nbsp;<span class="ans">T</span></div></div>
-</div>
-<p style="margin-top: 1rem">The source's heart sits in panel 4, and the target's star sits in panel 2. Every letter in the target means something different:</p>
-<div class="outcomes">
-  <div><span class="L">T</span>Nothing useful moved. The target answers its own question as before.</div>
-  <div><span class="L">D</span>The source's finished answer moved over.</div>
-  <div><span class="L">K</span>A <b>pointer</b> moved over: "look in panel 4". The target looked there in its own picture.</div>
-  <div><span class="L">P</span>The request moved over: "find the heart". The target found the heart in its own picture.</div>
-  <div><span class="L">R</span>The layout moved over: the target searched for its star among the source's shapes.</div>
-</div>
-<p>One more check runs through every experiment. Whenever we patch a set of heads, we also patch the same number of heads picked at random from the same layers. If the random heads do nothing, the effect belongs to the heads we found, not to patching heads in general.</p>
-</div>
-
-
-<p>Our first patch copies the whole state of the colon token, one layer at a time. In the low layers, the patch changes nothing, and the target answers <span class="tok">T</span>. In layers 23 to 29, the target answers <span class="tok">K</span>: the copied state says <i>"the answer is in panel 4"</i>, and the target goes and reads its own panel 4. From layer 30 on, the target simply copies the source's letter, <span class="tok">D</span>. So halfway up the stack, the colon token already holds a pointer. The VLM knows <i>where</i> the answer is, but has not yet read <i>what</i> it is.</p>
+<p>We start by patching the entire residual vector at the colon token, the token's full internal state, from the source into the target, one layer at a time. Up to layer 20, the target's answer is unchanged in 99.6% of cases or more. From layers 23 to 29, the target answers <span class="tok">K</span>: the patch transfers the pointer resolved in the source run, but the target still reads the letter from its own image. From layer 30 on, the target copies the source's answer, <span class="tok">D</span>, in 95% of cases or more. This shows that the colon token at layers 23 to 29 holds a resolved pointer. The model knows <i>where</i> the answer is before it reads <i>what</i> it is. Where is this pointer resolved?</p>
 
 <h2>Binding: where does the pointer come from?</h2>
-<p>If the colon token holds a pointer by layer 23, the pointer must have been made somewhere before it. So we repeated the patch at every token of the question, at every layer. Only one other token carries the pointer: the shape token, <span class="tok">star</span>, in layers 16 to 20. The VLM works out where the star is while it is still reading the question.</p>
-<p>Next, we looked at the attention heads at the shape token. Concretely, we patched the output of one attention head at a time, for all 1,152 heads of the VLM, and ranked the heads by how much each patch pushed the target toward <span class="tok">K</span>. The top 16 heads, in layers 15 to 21, do the work. Patching these 16 together moves the pointer in most cases, while 16 random heads from the same layers almost never do. We call them <b>binding heads</b>, because they bind a word in the question to a place in the picture.</p>
-<p>We can even split their job in two. Remember that a head compares its <b>query</b>, what it is looking for, with the <b>keys</b> of the image tokens, what each of them offers. When we patched only the queries, the target looked for a heart in its own picture and answered <span class="tok">P</span>. When we let the heads read only the source's image keys, the target looked for its own star among the source's shapes and answered <span class="tok">R</span>. When we patched both, the pointer itself moved. In plain words, the query says <i>"I need a star"</i>, and the key answers <i>"I am the panel with the star."</i></p>
+<p>To localize the token where the pointer is resolved, we patch the residual vector at every token of the prompt, at every layer. Besides the colon token, only the shape token, <span class="tok">star</span>, carries the pointer, at layers 16 to 20. The model resolves the pointer while it is still reading the question.</p>
+<p>We start by patching the output of one attention head at a time at the shape token, for all 1,152 heads, and rank the heads by how much each patch raises the score of <span class="tok">K</span>. We find that the top 16 attention heads, at layers 15 to 21, resolve the pointer. Patching the outputs of these 16 heads moves the target to <span class="tok">K</span> in 85.9% of cases, while the same number of random heads from the same layers does so in at most 0.1%. We call them <b>binding heads</b>, because they bind a word in the question to a region of the image.</p>
+<p>We further dissect how these heads resolve the pointer by patching their queries and keys separately. Recall that a head matches its <b>query</b>, what it looks for, against the <b>keys</b> of the image tokens, what each of them offers. Patching the queries of the top 8 query heads makes the target answer <span class="tok">P</span>, the letter inside its own heart, in 81.0% of cases. Letting the top 8 key heads read the source's image keys makes the target answer <span class="tok">R</span> in 83.1% of cases. Patching both together moves the pointer itself, <span class="tok">K</span>, in 95.0% of cases. In other words, the queries act like the instruction <i>"I need to look for stars"</i>, and the keys of the image tokens act like <i>"I am the panel with the star"</i>.</p>
 <figure class="center_image" style="margin-top: 30px">
   <center><img src="images/paper/binding.png" style="width:100%; max-width:900px" alt="Three plots from the paper on where the pointer appears."></center>
-  <figcaption><b>Finding where the VLM decides where to look.</b> (a) We patch the colon token's state one layer at a time. Each line shows how often the target writes one of the five letters. The low layers keep <span class="tok">T</span>, layers 23 to 29 give <span class="tok">K</span>, and the top layers give <span class="tok">D</span>. (b) The same patch at every token (across) and every layer (up). Darker means the pointer moved more often. Only two places light up: the shape token <span class="tok">star</span> in layers 16 to 20, and the colon token from layer 23 on. (c) Each small square is one attention head at the shape token, patched on its own. The 16 outlined heads, in layers 15 to 21, are the binding heads: <b>the VLM decides where to look while it is still reading the question.</b></figcaption>
+  <figcaption><b>The model resolves where to look while it is still reading the question.</b> (a) We patch the residual vector at the colon token one layer at a time. Each line is how often the target generates one of the five letters. The low layers keep <span class="tok">T</span>, layers 23 to 29 give <span class="tok">K</span>, and the top layers give <span class="tok">D</span>. (b) The same patch at every token (across) and every layer (up). Darker means the pointer moved more often. Only two spots light up: the shape token <span class="tok">star</span> at layers 16 to 20, and the colon token from layer 23 on. (c) Each square is one attention head at the shape token, patched on its own. The 16 outlined heads, at layers 15 to 21, are the binding heads.</figcaption>
 </figure>
+<div class="primer-body mech" id="mech-bind">
+<div class="xp-grid">
+<div class="xp-stage"><svg id="mb-svg" viewBox="0 0 900 584" role="img" aria-label="The shape token as a stack of 36 layers. The binding heads at layers 15 to 21 match the query for a star against the keys of the image and write a pointer to panel 2. Patching them from a source moves the pointer to panel 4."></svg></div>
+<aside class="xp-side">
+<div class="xp-title">Binding, step by step</div>
+<div class="say" aria-live="polite"></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+</aside>
+</div>
+</div>
+
 
 <h2>Relay: how does the pointer reach the answer?</h2>
-<p>The pointer is made at the shape token, but the answer is written several tokens later, at the colon token. Attention heads are the only parts of the VLM that move information between tokens. So some heads at the colon token must reach back to the shape token and fetch the pointer.</p>
-<p>Concretely, we let one head at a time at the colon token read from the source run instead of the target run, and ranked the heads by how often the target switched to <span class="tok">K</span>. The top 16 heads, mostly in layers 19 to 23, carry the pointer. When we let them read one token at a time, they get the pointer mostly from the shape token, where the binding heads left it. We call them <b>relay heads</b>.</p>
-<p>Two more tests tie the steps together. If we stop the relay heads from looking at the question, the target almost always loses its answer. The cleaner test goes the other way. We move the pointer with the binding heads in one run, and then let <i>only</i> the relay heads of a fresh target read from that run. Nothing else gets through, yet the target follows the moved pointer just as often. So the relay heads alone carry the pointer from the question to the answer.</p>
+<p>Since attention is the only component that moves information between tokens, some heads at the colon token must fetch the pointer from the shape token.</p>
+<p>To find them, we patch the values that each head at the colon token reads from the earlier tokens, one head at a time, while its query and keys stay unchanged. We rank the heads by how much each patch raises the score of <span class="tok">K</span>. We find that the top 16 attention heads, mostly at layers 19 to 23, carry the pointer: patching their values moves the target to <span class="tok">K</span> in 87.5% of cases. We call them <b>relay heads</b>. When the relay heads read the source's values at one token only, the shape token alone moves the target to <span class="tok">K</span> in 47.3% of cases, against at most 9.9% for any other token. The relay heads read the pointer mostly from the shape token, where the binding heads wrote it.</p>
+<p>To show that the relay heads carry the pointer, we test whether they are necessary and sufficient. First, when we block the relay heads from attending to the text, the target keeps its own answer in only 7.8% of cases, against 99.8% when random heads are blocked. Second, we patch the pointer with the binding heads, but let only the relay heads of an unedited target read from that patched run. Nothing else of the patched run reaches the target, yet the target answers <span class="tok">K</span> in 89.0% of cases, as often as in the binding experiment. These show that the relay heads alone carry the pointer from the question to the answer.</p>
+
+<div class="primer-body mech" id="mech-relay">
+<div class="xp-grid">
+<div class="xp-stage"><svg id="mr-svg" viewBox="0 0 900 584" role="img" aria-label="The relay heads at the colon token read the pointer from the shape token and write it into the colon token. Patching the values they read moves the pointer to panel 4."></svg></div>
+<aside class="xp-side">
+<div class="xp-title">Relay, step by step</div>
+<div class="say" aria-live="polite"></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+</aside>
+</div>
+</div>
 
 <h2>Gaze: how does the VLM read the panel the pointer names?</h2>
-<p>At the colon token, the VLM now holds a pointer, but the letter is still in the picture. Some heads have to follow the pointer back and read it. Concretely, we patched the query of one head at a time at the colon token, and found 32 heads, in layers 19 to 34, that send the target to <span class="tok">K</span>. We call them <b>gaze heads</b>, because they decide where the VLM's gaze lands.</p>
-<p>The pointer reaches the picture only through the gaze heads. If we move the pointer with the binding heads but keep the gaze heads' queries as they were, the moved pointer almost never changes the answer. And if we let the gaze heads read the source's picture while they follow the target's pointer, the target writes the source's letter. Most of these heads are among the <a href="https://gaze.baulab.info/">Gaze Heads</a> of our earlier work, which we found by watching where a model looks while it describes comic strips.</p>
+<p>To read the letter, some attention heads at the colon token must use the pointer to look back at its panel. To find them, we patch the queries of one attention head at a time at the colon token, and rank the heads by how much each patch raises the score of <span class="tok">K</span>. We find that the top 32 attention heads, at layers 19 to 34, execute the pointer: patching their queries moves the target to <span class="tok">K</span> in 74.0% of cases, against 0.0% for random heads. We call them <b>gaze heads</b>.</p>
+<p>The pointer acts through the gaze heads. When we patch the pointer with the binding heads but keep the gaze heads' queries at the target's values, the target keeps its own answer in 98.4% of cases. When the gaze heads read the source's image values instead, the target answers with the source's letter at its own panel in 93.7% of cases. Most of our gaze heads are among the <a href="https://gaze.baulab.info/">Gaze Heads</a> of our earlier work (23 of 32 in the published top 100), which were found by watching where a model looks while it describes comic panels. Our smaller set is causally more effective: the published top 100 move the target to <span class="tok">K</span> in 64.2% of cases, against 74.0% for our 32 gaze heads.</p>
+
+<div class="primer-body mech" id="mech-gaze">
+<div class="xp-grid">
+<div class="xp-stage"><svg id="mg-svg" viewBox="0 0 900 584" role="img" aria-label="The gaze heads at the colon token follow the pointer back to panel 2 and bring back its letter. Patching their queries makes them read panel 4."></svg></div>
+<aside class="xp-side">
+<div class="xp-title">Gaze, step by step</div>
+<div class="say" aria-live="polite"></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+</aside>
+</div>
+</div>
 
 <h2>Do the gaze heads bring back a word, or an idea?</h2>
-<p>When the gaze heads read a panel, do they bring back the word for what they see, or the idea of it? To test this, we dropped the letters and asked about colored shapes instead, <i>"What shape is the green marker?"</i>, in English, German, French, and Chinese. The VLM answers in the language of the question.</p>
-<p>What the gaze heads bring back does not depend on that language. It looks almost the same for one picture asked in two languages, and very different for two pictures asked in one language. If we patch the gaze heads from a source run that asks in French about another picture, the target names the <i>source's</i> shape, but in its <i>own</i> language. So the gaze heads bring back the idea, not the word.</p>
-<p>The language comes from a different set of 16 heads in the upper layers, which we call <b>language heads</b>. Patch them from a source run in another language, and the answer switches language while the shape stays the same. The last MLP layers then join the idea and the language into the final word.</p>
+<p>To test whether the gaze heads return the meaning of what they see or the word for it, we use colored shapes without letters and ask <i>"What shape is the green marker?"</i> in English, German, French, or Chinese. The model answers with the right shape in the question's language.</p>
+<p>What the gaze heads return is nearly the same for one image asked in two languages, and different for two images asked in one language. When we patch the outputs of the gaze heads from a source that asks in another language about another image, the target names the <i>source's</i> shape in its <i>own</i> language in 82.0% of cases, and never changes the language. So the gaze heads return the concept, not the word.</p>
+<p>The language is added by a different set of heads. We find that the top 16 attention heads, at layers 19 to 35, add the language: patching their outputs from a source in another language switches the answer's language in 95.3% of cases, without changing the shape. We call them <b>language heads</b>. The late MLP layers then combine the concept and the language into the final word.</p>
 <figure class="center_image" style="margin-top: 30px">
   <center><img src="images/paper/gaze_language.png" style="width:100%; max-width:900px" alt="Three plots from the paper on gaze heads and language heads."></center>
-  <figcaption><b>Reading and translating are done by different heads.</b> (a) Each square is one attention head at the colon token. Darker means patching that head's query moved the pointer more often. The 32 outlined gaze heads sit in layers 19 to 34. (b) How often the target follows a moved pointer as we patch more heads, for our gaze heads, for the Gaze Heads of our earlier work, and for random heads. Our 32 heads do better than that earlier work's top 100, and random heads do nothing. (c) The same kind of map for switching the answer's language. The 16 outlined language heads change the language without changing the shape. <b>One set of heads brings back what is there, another decides how to say it.</b></figcaption>
+  <figcaption><b>Gaze heads read the panel, and language heads choose the language.</b> (a) Each square is one attention head at the colon token. Darker means patching the head's query moved the pointer more often. The 32 outlined gaze heads sit at layers 19 to 34. (b) How often the target follows a moved pointer as we patch more heads, for our gaze heads, the published Gaze Heads, and random heads. Our 32 heads beat the published top 100, and random heads do nothing. (c) The same map for switching the answer's language. The 16 outlined language heads change the language without changing the shape.</figcaption>
 </figure>
+<div class="primer-body mech" id="mech-lang">
+<div class="xp-grid">
+<div class="xp-stage"><svg id="mlang-svg" viewBox="0 0 900 584" role="img" aria-label="The gaze heads bring back the shape and the language heads add the language. Patching each from a German source changes the shape or the language."></svg></div>
+<aside class="xp-side">
+<div class="xp-title">Concept and language, step by step</div>
+<div class="say" aria-live="polite"></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+</aside>
+</div>
+</div>
+
 
 <h2>Progress: how does the VLM keep its place in a list?</h2>
-<p>So far the VLM gives one answer. Now ask for the letter inside <i>each</i> heart. After it writes <span class="tok">E</span>, it has to know that the first heart is done and move on. And since it has no notepad, it has to work this out again from the letters it has already written.</p>
-<p>The only tokens that know what has been written are the answer tokens and the comma tokens after them. So we copied the comma token from a source run that had written one letter into a target run that had written nothing. At layers 20 and 21, the target skips a panel it never answered from. It could only have learned that this panel was done from the copied state. So the comma token holds the VLM's progress.</p>
-<p>What form does progress take? It could be a count, <i>"two done"</i>. It could be a set, <i>"panels 2 and 4 done"</i>. Or it could be a place, <i>"done up to panel 4"</i>. We built pairs where each of these makes the target write a different letter. At layers 20 and 21 the answer is clear: progress is a place. It says <i>"done up to here"</i>, and the VLM moves on to the next matching panel after it.</p>
-<p>Where does progress come from? From the same binding heads. At each answer token, they tie the letter just written back to the panel it came from. If we quietly move a written letter one panel to the right in the source picture, and let the binding heads read it there, the target's next answer also moves one panel to the right. So the binding heads do the same job twice. First they tie the question to the picture, then they tie each answer to the panel it came from. The comma token then reads this from the answer token.</p>
+<p>When several panels are correct, the model has to keep track of how far it has come, which we call <b>progress</b>, and pick the next panel, which we call <b>select</b>. Since the model has no notepad, it must recompute its progress at every token from the answers it has already written.</p>
+<p>Only the tokens after the first answer can carry progress: the answer and comma tokens. To localize progress, we patch the residual vector of the comma token, from a source that has written one letter, into the colon token of a target that has written none, one layer at a time. The two runs ask for different shapes and share no letter. They share only the panel the source has just answered from. At layer 20, the target skips this panel and moves on to its second answer in 91.0% of cases, and in 70.0% at layer 21. The target skips a panel it never answered from, because a source with a different shape and different letters answered from it. This shows that the comma token at layers 20 and 21 holds progress, and that progress is about a panel, not a shape or a letter.</p>
+<p>Progress could be a count (<i>"two answers done"</i>), a set of panels (<i>"panels 2 and 4 done"</i>), or a position (<i>"done up to panel 4"</i>). To tell them apart, we build a pair in which each form predicts a different answer. At layer 20, the target answers with the first matching panel after panel 4 in 98.4% of cases, and in 97.6% at layer 21. Progress is a position: the list is done up to panel 4. Where does this progress come from?</p>
+<p>To test whether the answer token sets progress, we take a target that has written two letters, and a source image in which the last written letter sits one panel further to the right. We let the binding heads at the last answer token read the source's keys, while everything else stays the same. If the binding heads bind the written letter to its panel, the target skips one more panel. This happens in 84.2% of cases with the 16 binding heads, and in 0.0% with random heads. In other words, binding happens twice, largely through the same heads. At the shape token they bind the requested shape to its panels, and at each answer token they bind the letter just written to the panel it came from. The comma token then turns that panel into progress.</p>
 <figure class="center_image" style="margin-top: 30px">
   <center><img src="images/paper/relay_progress.png" style="width:100%; max-width:900px" alt="Three plots from the paper on relay heads and progress at the comma token."></center>
-  <figcaption><b>The pointer travels to the answer, and the comma token holds the progress.</b> (a) The relay heads at the colon token, allowed to read only one token at a time. They pick up the pointer mostly from the shape token, <span class="tok">star</span>. (b) We copy the comma token from a source run that has written one letter, one layer at a time. At layers 20 and 21 the target skips ahead to its next panel, though it never answered from the first. (c) A pair built so that a count, a set, and a place each predict a different letter. At layers 20 and 21 the target almost always picks the first match after panel 4: <b>progress is a place in the picture, not a count.</b></figcaption>
+  <figcaption><b>Relay heads read the pointer from the shape token, and the comma token holds progress.</b> (a) The relay heads at the colon token, allowed to read one token at a time. They read the pointer mostly from the shape token <span class="tok">star</span>. (b) We patch the comma token from a source that has written one letter, one layer at a time. At layers 20 and 21, the target skips to its next panel, even though it never answered from the first. (c) A pair in which a count, a set, and a position each predict a different letter. At layers 20 and 21, the target almost always picks the first match after panel 4: progress is a position in the image.</figcaption>
 </figure>
+<div class="primer-body mech" id="mech-progress">
+<div class="xp-grid">
+<div class="xp-stage"><svg id="mp-svg" viewBox="0 0 900 584" role="img" aria-label="The binding heads at the answer token point to its panel, the comma token turns it into progress, and select picks the next panel. Copying the comma state into a fresh target makes it skip panel 1."></svg></div>
+<aside class="xp-side">
+<div class="xp-title">Progress, step by step</div>
+<div class="say" aria-live="polite"></div>
+<div class="controls"><button type="button" data-act="prev">Back</button><button type="button" data-act="play">Play</button><button type="button" data-act="next">Next</button></div>
+</aside>
+</div>
+</div>
+
 
 <h2>Select: how does the VLM choose the next panel?</h2>
-<p>With the matching panels and the progress both at the comma token, the VLM still has to choose which panel comes next. We can watch this choice without any patch, just by writing letters out of order for the VLM. With only the second heart written, it goes on to the third. With the third and then the first written, it goes back for the second. The rule is simple: take the nearest unwritten panel after the progress, and go back only when nothing is left to the right. When nothing is left at all, the same step makes the VLM stop. This choice is made at the comma token, in layers 20 to 25.</p>
+<p>With the matching panels and progress both at the comma token, we can read the choice from the model without any patch, by prefilling the letters out of order. With only the second heart written, the model answers with the third in 92.8% of lists. With the third and then the first written, it answers with the second in 95.6%. So select starts at the progress and takes the nearest unwritten panel, preferring the right, and goes back when nothing is left to the right. When nothing is left at all, the model stops. The choice is made at the comma token, at layers 20 to 25.</p>
+<div class="plan-back"><a href="#plan">See the whole plan</a></div>
 
 <h2>Does this happen on real photos too?</h2>
-<p>A strip of panels is a clean lab, but people ask about real photos. So we asked the VLM ordinary list questions about everyday photos, like <i>"What animals are in this image?"</i>. At each comma token, the gaze heads look ahead at the animal the VLM is about to name. If we stop the comma token from seeing an animal already named, the VLM names it again. Setting the language heads to their English values turns answers in other languages into English. And the binding, relay, and gaze heads show up in every size of this VLM we tried, from 2 billion to 32 billion parameters.</p>
+<p>On natural photos with list questions such as <i>"What animals are in this image?"</i>, the plan carries over. At the comma token, the gaze heads attend more to the object named next than to the object just named in 83.6% of lists. When we block the comma token from attending to an object already described, the model names that object again in 79.6% of cases. Setting the language heads to their English averages turns 96.5% of non-English answers into English. The binding, relay, and gaze heads also appear at every model size from 2B to 32B.</p>
 
 <h2 id="demo">Try it yourself: watch a VLM plan in your browser</h2>
 <div class="card" style="max-width: 1020px; margin: 10px auto;">
@@ -1031,6 +1107,99 @@ function makeStepper(root, frames, draw, interval) {
   btn("play").addEventListener("click", play);
   show(0);
 }
+/* The VLM explorer: one primer whose views zoom into each other. The left side only draws; the right side explains.
+   Every view registers its frames and a draw function. The map on the right jumps to any view. */
+var XP = (function () {
+  var root = document.getElementById("primer-explorer");
+  if (!root) return { add: function () {}, go: function () {}, start: function () {} };
+  var TREE = {
+    overview:  { name: "VLM", parent: null },
+    stack:     { name: "Language model", parent: "overview" },
+    block:     { name: "Transformer block", parent: "stack" },
+    attention: { name: "Attention", parent: "block" },
+    head:      { name: "Attention heads", parent: "attention" },
+    mlp:       { name: "MLP", parent: "block" }
+  };
+  var ORDER = ["overview", "stack", "block", "attention", "head", "mlp"];
+  var V = {}, cur = null, at = 0, timer = null, started = false;
+  var say = root.querySelector(".say"), title = root.querySelector(".xp-title"), count = root.querySelector(".xp-count");
+  var map = root.querySelector(".xp-map"), stage = root.querySelector(".xp-stage");
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var btn = function (a) { return root.querySelector('[data-act="' + a + '"]'); };
+  function depth(v) { var d = 0; while (TREE[v].parent) { v = TREE[v].parent; d++; } return d; }
+  function isAncestor(a, b) { while (b) { if (b === a) return true; b = TREE[b].parent; } return false; }
+  function childOnPath(top, bottom) { while (TREE[bottom].parent !== top) bottom = TREE[bottom].parent; return bottom; }
+  ORDER.forEach(function (v) {
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = TREE[v].name; b.dataset.view = v;
+    b.style.marginLeft = (depth(v) * 18) + "px";
+    b.addEventListener("click", function () { go(v); });
+    map.appendChild(b);
+  });
+  function add(name, svg, frames, draw, interval, anchors) {
+    V[name] = { el: svg.closest(".xp-view"), frames: frames, draw: draw, interval: interval || 4000, anchors: anchors || {} };
+  }
+  function originOf(el) {                          // the point to zoom around, in % of the stage
+    var r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+    if (!s.width || !r.width) return "50% 50%";
+    return ((r.left + r.width / 2 - s.left) / s.width * 100) + "% " + ((r.top + r.height / 2 - s.top) / s.height * 100) + "%";
+  }
+  function stop() { clearTimeout(timer); timer = null; btn("play").textContent = "Play"; }
+  function show(n) {
+    var v = V[cur];
+    at = Math.max(0, Math.min(v.frames.length - 1, n));
+    v.draw(at);
+    say.innerHTML = v.frames[at];
+    count.textContent = (at + 1) + " / " + v.frames.length;
+    btn("prev").disabled = at === 0;
+    btn("next").disabled = at === v.frames.length - 1;
+  }
+  function go(name, anchor) {
+    if (!V[name]) return;
+    stop();
+    var from = cur && V[cur], to = V[name], prev = cur;
+    if (from === to) { show(0); return; }
+    var how = !from ? "none" : isAncestor(prev, name) ? "in" : isAncestor(name, prev) ? "out" : "jump";
+    var h0 = stage.offsetHeight, o = "50% 50%";
+    if (how === "in") o = originOf(anchor || from.anchors[childOnPath(prev, name)] || from.el);
+    cur = name;
+    to.el.classList.add("on");
+    if (how === "out") { var a = to.anchors[childOnPath(name, prev)]; if (a) o = originOf(a); }
+    title.textContent = TREE[name].name;
+    map.querySelectorAll("button").forEach(function (b) { b.classList.toggle("on", b.dataset.view === name); b.setAttribute("aria-current", b.dataset.view === name ? "true" : "false"); });
+    show(0);
+    if (!from) return;
+    from.el.classList.remove("on");
+    var h1 = to.el.offsetHeight;
+    stage.style.height = h0 + "px"; stage.offsetHeight; stage.style.height = h1 + "px";
+    clearTimeout(stage.xpT); stage.xpT = setTimeout(function () { stage.style.height = ""; }, 650);
+    if (reduce || !to.el.animate) return;
+    from.el.classList.add("leaving");
+    var big = "scale(2.6)", small = "scale(0.38)";
+    var outTo = how === "in" ? big : how === "out" ? small : "scale(1)";
+    var inFrom = how === "in" ? small : how === "out" ? big : "scale(1)";
+    from.el.style.transformOrigin = o; to.el.style.transformOrigin = o;
+    var opt = { duration: 600, easing: "cubic-bezier(.45,0,.25,1)" };
+    from.el.animate([{ transform: "scale(1)", opacity: 1 }, { transform: outTo, opacity: 0 }], opt).onfinish = function () { from.el.classList.remove("leaving"); };
+    to.el.animate([{ transform: inFrom, opacity: 0 }, { transform: "scale(1)", opacity: 1 }], opt);
+  }
+  function play() {
+    if (timer) { stop(); return; }
+    if (at === V[cur].frames.length - 1) show(0);
+    btn("play").textContent = "Pause";
+    (function tick() { timer = setTimeout(function () { if (at < V[cur].frames.length - 1) { show(at + 1); tick(); } else stop(); }, V[cur].interval); })();
+  }
+  btn("prev").addEventListener("click", function () { stop(); show(at - 1); });
+  btn("next").addEventListener("click", function () { stop(); show(at + 1); });
+  btn("play").addEventListener("click", play);
+  function start() { if (started) return; started = true; go("overview"); }
+  root.addEventListener("toggle", function () { if (root.open) start(); });
+  return { add: add, go: go, start: start };
+})();
+function xpClick(el, view) {                       // make a drawn part zoom into its view when clicked
+  el.classList.add("xp-click");
+  el.addEventListener("click", function () { XP.go(view, el); });
+}
 function svgEl(tag, attrs, text) {
   var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for (var k in attrs) e.setAttribute(k, attrs[k]);
@@ -1086,24 +1255,6 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
   return { att: att, mlp: mlp, top: T, bottom: B };
 }
 
-/* Primer 1a: the simplest transformer block, drawn once. */
-(function () {
-  var svg = document.getElementById("block-svg"); if (!svg) return;
-  blkMarkers(svg, "b1");
-  var X = 480, CX = 340, Y0 = 300;
-  var stream = svgEl("line", { x1: X, y1: 326, x2: X, y2: 14, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#b1-r)" });
-  svg.appendChild(stream);
-  var b = blkBlock(svg, "b1", X, CX, Y0, "one transformer block");
-  svg.appendChild(svgEl("rect", { x: X - 40, y: 328, width: 80, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
-  svg.appendChild(svgEl("text", { x: X, y: 342, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "cat"));
-  svg.appendChild(svgEl("text", { x: X + 52, y: 342, "dominant-baseline": "central", "font-size": 13, fill: P_ROSE, "font-family": PF }, "residual stream"));
-  svg.appendChild(svgEl("text", { x: X + 14, y: 26, "dominant-baseline": "central", "font-size": 13, fill: P_ROSE, "font-family": PF }, "to the next block"));
-  svg.appendChild(svgEl("text", { x: X + 68, y: b.att.yPlus, "dominant-baseline": "central", "font-size": 13, fill: P_BLUE, "font-family": PF }, "add what attention found"));
-  svg.appendChild(svgEl("text", { x: X + 68, y: b.mlp.yPlus, "dominant-baseline": "central", "font-size": 13, fill: P_GREEN, "font-family": PF }, "add the MLP's result"));
-  svg.appendChild(svgEl("path", { d: "M120," + b.att.mid + " H" + (b.att.left - 1), fill: "none", stroke: P_BLUE, "stroke-width": 2, "stroke-dasharray": "5 4", "marker-end": "url(#b1-b)" }));
-  svg.appendChild(svgEl("text", { x: 120, y: b.att.mid - 12, "dominant-baseline": "central", "font-size": 13, fill: P_BLUE, "font-family": PF }, "other tokens"));
-  svg.appendChild(svgEl("text", { x: b.mlp.left - 40, y: b.mlp.mid, "text-anchor": "end", "dominant-baseline": "central", "font-size": 13, fill: P_GREEN, "font-family": PF }, "this token only"));
-})();
 
 /* Primer 1b: a sentence through two blocks, drawn for the last token only. Earlier tokens keep faint streams.
    One ball carries the last token's stream up the VLM: maroon on the stream, blue inside attention, green inside the MLP. */
@@ -1145,19 +1296,19 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
   var STARTS = [TOKY, b1.att.yPlus, b1.mlp.yPlus, b2.att.yPlus, b2.mlp.yPlus];
   var STATE = [[0, 0, 0, 0, 0], [1, 0, 0, 0, 0], [2, 1, 0, 0, 0], [2, 2, 1, 0, 0], [2, 2, 2, 1, 0], [2, 2, 2, 2, 1]];
   var FRAMES = [
-    'A sentence of five tokens, each with its own residual stream. We follow the last token, <span class="tok">the</span>, through two blocks. The other tokens go through the same blocks, but we keep them faint.',
-    '<b>Block 1, attention.</b> The stream (maroon) flows into attention. Attention looks back at the tokens before it, and their information flows in (blue). The result flows out and is added to the stream at the plus. A token can only look back, never ahead.',
-    '<b>Block 1, MLP.</b> The stream flows on into the MLP, which works on this token alone (green). Nothing comes in from other tokens. The result is added back to the stream.',
-    '<b>Block 2, attention.</b> The same two steps, one block higher. The stream, now holding more than the word itself, flows into attention, which looks back again.',
+    'One layer is one <b>transformer block</b>. It has two steps. First, <b>attention</b> reads the stream, brings in information from <i>other</i> tokens, and adds it back. Then the <b>MLP</b> reads the stream, works on <i>this</i> token alone, and adds its result back. Below, we follow the last token of a sentence, <span class="tok">the</span>, through two blocks, and keep the other tokens faint. Click attention or the MLP to zoom in.',
+    '<b>Block 1, attention.</b> The stream (maroon) flows into attention. Attention reads the tokens before it, and their information flows in (blue). The result is added to the stream at the plus. A token can only read earlier tokens, never later ones.',
+    '<b>Block 1, MLP.</b> The stream flows into the MLP, which works on this token alone (green). No information comes in from other tokens. The result is added back to the stream.',
+    '<b>Block 2, attention.</b> The same two steps repeat one block higher. The stream now holds more than the word itself. Attention reads the earlier tokens again.',
     '<b>Block 2, MLP.</b> The MLP works on the stream once more and adds its result.',
-    'At the top, the last token\'s stream, with everything that was added to it, is turned into the next word, <span class="tok">mat</span>. The VLM adds it to the end of the sentence and runs everything again for the word after.'
+    'At the top, the stream of the last token is turned into the next word, <span class="tok">mat</span>. The model adds this word to the end of the sentence and runs again to generate the word after it.'
   ];
   function setStatic(p, m) {
     p.g.setAttribute("opacity", m === 0 ? 0.25 : 1);
     p.box.classList.remove("pulse");
     if (p.arrows) p.arrows.setAttribute("opacity", m === 2 ? 0.2 : 0);
   }
-  makeStepper(document.getElementById("primer-transformer"), FRAMES, function (n) {
+  XP.add("block", svg, FRAMES, function (n) {
     mv.clear();
     var s = STATE[n];
     PARTS.forEach(function (p, i) { setStatic(p, s[i]); });
@@ -1186,7 +1337,8 @@ function blkBlock(svg, id, X, cx, yBranch, name) {      // returns the attention
     mv.along(p.outP, c, t, 700, 7); t += 700;                           // out to the plus
     mv.rest(X, p.yPlus, P_ROSE, t, 7);                                  // added: the ball is part of the stream again
     mv.run();
-  }, 5200);
+  }, 5200, { attention: b1.att.box, mlp: b1.mlp.box });
+  [b1, b2].forEach(function (b) { xpClick(b.att.box, "attention"); xpClick(b.mlp.box, "mlp"); });
 })();
 
 /* Shared: glowing dots that travel along paths, cancelled on every frame change. */
@@ -1362,15 +1514,15 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     ["q", "k", "v", "bars", "wt", "plus", "res"]
   ];
   var FRAMES = [
-    'Each word has its own residual stream. One attention head sits on the stream of the last word, <span class="tok">it</span>, and can read from every word before it. Let\'s follow exactly what it computes.',
-    '<b>1. Query.</b> The stream of <span class="tok">it</span> passes through a small table of numbers the head learned in training, <b>W<sub>Q</sub></b>. Out comes the <b>query</b>: a description of what this word is looking for, roughly <i>"who is it?"</i>',
-    '<b>2. Keys and values.</b> At the same time, the stream of every earlier word passes through two more learned tables, side by side. <b>W<sub>K</sub></b> makes its <b>key</b>, a label of what the word is. <b>W<sub>V</sub></b> makes its <b>value</b>, the information it will hand over if it gets picked. The key is only used to be found. The value is only used once found.',
-    '<b>3. Scores.</b> The head compares the query with each key: it multiplies them number by number and adds it all up (a <b>dot product</b>). A good match gives a big score, and <span class="tok">cat</span> scores highest. The values wait. (All numbers here are a cartoon.)',
-    '<b>4. Softmax.</b> The scores are turned into shares that add up to 100%. This step is called <b>softmax</b>, and it lets the biggest score take most of the share. <span class="tok">cat</span> now gets ' + PCT[1] + '% of the attention.',
-    '<b>5. Weighted sum.</b> Now the values come in. Each value is multiplied by its word\'s share: ' + PCT[1] + '% of <span class="tok">cat</span>\'s value, ' + PCT[2] + '% of <span class="tok">sat</span>\'s, and so on. They are all added up (Σ), and the sum is added to the stream of <span class="tok">it</span>.',
-    'Now the stream of <span class="tok">it</span> knows that it means the cat. In short: the <b>query</b> is what a word is looking for, the <b>key</b> is how a word can be found, softmax decides <b>how much</b> to take from each word, and the <b>value</b> is what gets taken. In our puzzle, the query at the shape token <span class="tok">star</span> asks <i>"where is a star?"</i>, the keys of the image tokens say which shape each one holds, and the values carry where it is.'
+    'Each word has its own residual stream. One attention head sits on the stream of the last word, <span class="tok">it</span>, and can read every word before it. We follow what it computes, step by step.',
+    '<b>1. Query.</b> The stream of <span class="tok">it</span> is multiplied by a matrix of numbers that the head learned in training, <b>W<sub>Q</sub></b>. The result is the <b>query</b>, which describes what this word is looking for, roughly <i>"who is it?"</i>',
+    '<b>2. Keys and values.</b> The stream of every earlier word is multiplied by two more learned matrices. <b>W<sub>K</sub></b> gives its <b>key</b>, which describes what the word is. <b>W<sub>V</sub></b> gives its <b>value</b>, the information the word hands over if the head picks it. The key is used to find the word. The value is what the head takes from it.',
+    '<b>3. Scores.</b> The head compares the query with each key using a <b>dot product</b>: it multiplies the two vectors number by number and adds the results. A good match gives a high score, and <span class="tok">cat</span> scores highest. (All numbers here are made up for illustration.)',
+    '<b>4. Softmax.</b> The scores are turned into shares that add up to 100%. This step is called <b>softmax</b>, and it gives most of the share to the highest score. <span class="tok">cat</span> now gets ' + PCT[1] + '% of the attention.',
+    '<b>5. Weighted sum.</b> Each value is multiplied by the share of its word: ' + PCT[1] + '% of the value of <span class="tok">cat</span>, ' + PCT[2] + '% of the value of <span class="tok">sat</span>, and so on. The head adds them up (Σ) and adds the sum to the stream of <span class="tok">it</span>.',
+    'The stream of <span class="tok">it</span> now holds that it means the cat. The <b>query</b> is what a word looks for, the <b>key</b> is how a word is found, softmax sets <b>how much</b> to take from each word, and the <b>value</b> is what is taken. In our task, the query at the shape token <span class="tok">star</span> asks <i>"where is a star?"</i>, the keys of the image tokens say which shape each one holds, and the values carry where it is.'
   ];
-  makeStepper(document.getElementById("primer-attention"), FRAMES, function (n) {
+  XP.add("head", svg, FRAMES, function (n) {
     mv.clear();
     Object.keys(groups).forEach(function (g) { groups[g].setAttribute("opacity", SHOW[n].indexOf(g) >= 0 ? 1 : 0); });
     setBars(n >= 4 ? 1 : 0);
@@ -1461,7 +1613,6 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     g.appendChild(svgEl("text", { x: HX(j), y: HY + 11, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11.5, fill: "#333", "font-family": PF }, h.look));
     heads.appendChild(g); headG.push(g);
   });
-  heads.appendChild(svgEl("text", { x: BIG.x + BIG.w - 16, y: BIG.y + 20, "text-anchor": "end", "dominant-baseline": "central", "font-size": 12, fill: P_GRAY, "font-family": PF }, "our VLM has 32 heads here; we draw 4"));
   svg.appendChild(heads);
   // where each head looks: from the head down to its word
   var lookG = [], lookP = [];
@@ -1489,13 +1640,13 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     headG.forEach(function (g, j) { g.setAttribute("opacity", only < 0 || only === j ? 1 : 0.3); });
   }
   var FRAMES = [
-    'In the transformer block, attention was one box. It lets the word <span class="tok">it</span> pull in information from the words before it. Let\'s open the box.',
-    'Inside, attention is not one thing. It is many small parts working side by side, called <b>attention heads</b>. Each head is like a reader who looks for one kind of thing.',
-    'Each head looks at the earlier words for something different. One asks <i>"who is it?"</i> and finds <span class="tok">cat</span>. Another looks at the word just before. Another looks for the action. Click a head to see only where it looks. Nobody tells a head what to look for: each one learns its job during training.',
-    'Every head brings back what it found, and all of it is added to the stream of <span class="tok">it</span>. So after attention, the stream knows several things at once: who <span class="tok">it</span> is, what happened, and more. Our VLM has 32 heads in each of its 36 layers, 1,152 in all. Our project is about finding the few that build the plan. The next primer opens up one head.'
+    'In the transformer block, attention was one box. It lets the word <span class="tok">it</span> bring in information from the words before it. Below, we open this box.',
+    'Attention is made of many small parts called <b>attention heads</b>. They work side by side, and each head looks for one kind of information.',
+    'Each head looks for something different in the earlier words. One head asks <i>"who is it?"</i> and finds <span class="tok">cat</span>. Another looks at the word just before. Another looks for the action. Click a head to see where it looks. No one tells a head what to look for. Each head learns its job during training.',
+    'Each head brings back what it found, and all of it is added to the stream of <span class="tok">it</span>. After attention, the stream holds several facts at once: who <span class="tok">it</span> is, what happened, and more. Our VLM has 32 heads in each of its 36 layers, 1,152 in all. We find the few heads that build the plan. Click <i>Attention heads</i> on the right to open one head.'
   ];
   var cur = 0;
-  makeStepper(document.getElementById("primer-inside"), FRAMES, function (n) {
+  XP.add("attention", svg, FRAMES, function (n) {
     mv.clear(); cur = n; only = -1;
     setBox(n >= 1 ? 1 : 0);
     feed.setAttribute("opacity", n === 0 ? 1 : 0);
@@ -1507,98 +1658,832 @@ function tag(parent, x, y, letter, color, w) {      // a small rounded label sit
     if (n === 2) lookP.forEach(function (p, j) { mv.along(p, HEADS[j].c, j * 350, 1100, 6, true); });
     if (n === 3) outP.forEach(function (p, j) { mv.along(p, HEADS[j].c, j * 150, 1400, 6); });
     mv.run();
-  }, 4600);
+  }, 4600, { head: headG[0] });
   headG.forEach(function (g, j) {
     g.addEventListener("click", function () { if (cur < 2) return; only = only === j ? -1 : j; showLooks(cur); });
   });
 })();
 
-/* Primer: how a VLM reads a picture. Cut into squares, each square becomes a token, the picture tokens sit between
-   "image start" and "image end" in the same row as the words, and the same language model writes one token at a time. */
+/* Explorer view 1: the whole VLM. The image goes through the vision encoder and becomes image tokens, the question
+   becomes text tokens, the row goes up the language model, and each generated token is added to the end of the row. */
 (function () {
-  var svg = document.getElementById("vlm-svg"); if (!svg) return;
-  blkMarkers(svg, "vl");
-  var COLS = 8, ROWS = 2, P = 44, IX = 274, IY = 30;      // the picture: 8 by 2 squares of 44 px
-  // the picture itself, defined once and shown through windows
-  var defs = svgEl("defs", {}), pic = svgEl("g", { id: "vl-pic" });
+  var svg = document.getElementById("ov-svg"); if (!svg) return;
+  blkMarkers(svg, "ov");
+  var AMBER = "#d8a93a", AMBER_BG = "#fff3d6", AMBER_INK = "#7a5a10";
+  var P = 40, IX = 60, IY = 450, COLS = 8, ROWS = 2, RY = 268, S = 18;
+  // the image: four panels, each cut later into 2 by 2 squares
+  var defs = svgEl("defs", {}), pic = svgEl("g", { id: "ov-pic" });
   pic.appendChild(svgEl("rect", { x: 0, y: 0, width: COLS * P, height: ROWS * P, fill: "#fff" }));
-  [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]].forEach(function (s, i) {
+  [["heart", "P"], ["star", "T"], ["heart", "K"], ["circle", "R"]].forEach(function (s, i) {
     pic.appendChild(svgEl("rect", { x: i * 2 * P, y: 0, width: 2 * P, height: 2 * P, fill: "none", stroke: "#222", "stroke-width": 1.5 }));
-    var g = svgEl("g", { transform: "translate(" + (i * 2 * P + 6) + ",6) scale(0.76)" }); g.innerHTML = shapeSVG(s[0], s[1]); pic.appendChild(g);
+    var g = svgEl("g", { transform: "translate(" + (i * 2 * P + 5) + ",5) scale(0.7)" }); g.innerHTML = shapeSVG(s[0], s[1]); pic.appendChild(g);
   });
   defs.appendChild(pic); svg.appendChild(defs);
-  var whole = svgEl("use", { href: "#vl-pic", x: IX, y: IY }); svg.appendChild(whole);
+  svg.appendChild(svgEl("use", { href: "#ov-pic", x: IX, y: IY }));
+  svg.appendChild(svgEl("text", { x: IX, y: IY + ROWS * P + 18, "dominant-baseline": "central", "font-size": 13, fill: P_GRAY, "font-family": PF }, "image"));
   var grid = svgEl("g", { opacity: 0 });
   for (var c = 1; c < COLS; c++) grid.appendChild(svgEl("line", { x1: IX + c * P, y1: IY, x2: IX + c * P, y2: IY + ROWS * P, stroke: P_ROSE, "stroke-width": 1.5, "stroke-dasharray": "4 3" }));
   grid.appendChild(svgEl("line", { x1: IX, y1: IY + P, x2: IX + COLS * P, y2: IY + P, stroke: P_ROSE, "stroke-width": 1.5, "stroke-dasharray": "4 3" }));
-  grid.appendChild(svgEl("rect", { x: IX, y: IY, width: COLS * P, height: ROWS * P, fill: "none", stroke: P_ROSE, "stroke-width": 2 }));
   svg.appendChild(grid);
-  // the row of tokens: image start, 16 squares, image end, then the words
-  var RY = 236, S = 30, GAP = 3, x = 22, slots = [];
-  var row = svgEl("g", {}); svg.appendChild(row);
-  function chip(label, w, fill, stroke, color) {
+  // the vision encoder
+  var enc = svgEl("g", {});
+  enc.appendChild(svgEl("rect", { x: IX, y: 350, width: COLS * P, height: 50, rx: 9, fill: AMBER_BG, stroke: AMBER, "stroke-width": 1.8 }));
+  enc.appendChild(svgEl("text", { x: IX + COLS * P / 2, y: 375, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 15, "font-weight": 700, fill: AMBER_INK, "font-family": PF }, "Vision encoder"));
+  // the row of tokens: image start, 16 image tokens, image end, the words, then the answer
+  var row = [], x = IX;
+  function chip(label, w, fill, stroke, color, y) {
     var g = svgEl("g", { opacity: 0 });
-    g.appendChild(svgEl("rect", { x: x, y: RY, width: w, height: S, rx: 5, fill: fill, stroke: stroke, "stroke-width": 1.5 }));
-    g.appendChild(svgEl("text", { x: x + w / 2, y: RY + S / 2, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: color, "font-family": PM }, label));
-    row.appendChild(g); x += w + GAP; return g;
+    g.appendChild(svgEl("rect", { x: 0, y: 0, width: w, height: 26, rx: 5, fill: fill, stroke: stroke, "stroke-width": 1.5 }));
+    if (label) g.appendChild(svgEl("text", { x: w / 2, y: 13, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, "font-weight": label.length === 1 ? 700 : 400, fill: color, "font-family": PM }, label));
+    svg.appendChild(g); return g;
   }
-  var start = chip("image start", 92, "#fff3d6", "#d8a93a", "#7a5a10");
-  var tiles = [], tx0 = x;
+  function put(g, px, py) { g.setAttribute("transform", "translate(" + px + "," + py + ")"); }
+  var imStart = chip("", 12, AMBER_BG, AMBER, AMBER_INK); put(imStart, x, RY); row.push(x + 6); x += 16;
+  var tiles = [];
   for (var r = 0; r < ROWS; r++) for (var c2 = 0; c2 < COLS; c2++) {
-    var k = r * COLS + c2, home = { x: tx0 + k * (S + GAP), y: RY };
-    var t = svgEl("svg", { x: IX + c2 * P, y: IY + r * P, width: P, height: P, viewBox: (c2 * P) + " " + (r * P) + " " + P + " " + P, opacity: 0 });
-    t.appendChild(svgEl("use", { href: "#vl-pic" }));
-    t.appendChild(svgEl("rect", { x: c2 * P, y: r * P, width: P, height: P, fill: "none", stroke: P_ROSE, "stroke-width": 3 }));
-    svg.appendChild(t);
-    tiles.push({ el: t, from: { x: IX + c2 * P, y: IY + r * P, s: P }, to: { x: home.x, y: home.y, s: S } });
+    var k = r * COLS + c2;
+    var crop = svgEl("svg", { viewBox: (c2 * P) + " " + (r * P) + " " + P + " " + P, opacity: 0 });
+    crop.appendChild(svgEl("use", { href: "#ov-pic" }));
+    crop.appendChild(svgEl("rect", { x: c2 * P, y: r * P, width: P, height: P, fill: "none", stroke: P_ROSE, "stroke-width": 3 }));
+    var tok = svgEl("svg", { viewBox: (c2 * P) + " " + (r * P) + " " + P + " " + P, width: S, height: S, opacity: 0 });
+    tok.appendChild(svgEl("use", { href: "#ov-pic" }));
+    tok.appendChild(svgEl("rect", { x: c2 * P, y: r * P, width: P, height: P, fill: "none", stroke: AMBER, "stroke-width": 6 }));
+    svg.appendChild(crop); svg.appendChild(tok);
+    tiles.push({ crop: crop, tok: tok, a: { x: IX + c2 * P, y: IY + r * P }, b: { x: IX + c2 * P + 5, y: 362 }, c: { x: IX + c2 * P + 11, y: 330 }, d: { x: x, y: RY + 4 } });
+    row.push(x + S / 2); x += S + 2;
   }
-  x = tx0 + ROWS * COLS * (S + GAP);
-  var end = chip("image end", 84, "#fff3d6", "#d8a93a", "#7a5a10");
+  var imEnd = chip("", 12, AMBER_BG, AMBER, AMBER_INK); x += 2; put(imEnd, x, RY); row.push(x + 6); x += 26;
+  var WORDS = ["Letters", "in", "the", "hearts", "?"], words = [], wordsQ = [];
+  WORDS.forEach(function (w) {
+    var wd = Math.max(26, w.length * 9 + 14);
+    var q = chip(w, wd, "#f4f4f4", "#ccc", "#333"); put(q, x, 470); q.setAttribute("opacity", 1); wordsQ.push(q);
+    var g = chip(w, wd, "#f4f4f4", "#ccc", "#333"); words.push({ g: g, x: x });
+    row.push(x + wd / 2); x += wd + 4;
+  });
+  svg.appendChild(svgEl("text", { x: words[0].x, y: 514, "dominant-baseline": "central", "font-size": 13, fill: P_GRAY, "font-family": PF }, "question"));
   x += 6;
-  var words = ["Letter", "in", "the", "star", "?"].map(function (w) { return chip(w, w.length > 3 ? 58 : 34, "#f4f4f4", "#ccc", "#333"); });
-  var ansX = x + 6;
-  var ans = svgEl("g", { opacity: 0 });
-  ans.appendChild(svgEl("rect", { x: ansX, y: RY, width: 34, height: S, rx: 5, fill: "#F6D5DF", stroke: P_ROSE, "stroke-width": 1.5 }));
-  ans.appendChild(svgEl("text", { x: ansX + 17, y: RY + S / 2, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, "font-weight": 700, fill: "#3A1D2A", "font-family": PM }, "T"));
-  svg.appendChild(ans);
-  function placeTile(t, k) {
-    var a = t.from, b = t.to, s = a.s + (b.s - a.s) * k;
-    t.el.setAttribute("x", a.x + (b.x - a.x) * k); t.el.setAttribute("y", a.y + (b.y - a.y) * k);
-    t.el.setAttribute("width", s); t.el.setAttribute("height", s);
-  }
-  // the language model above the row
-  var lm = svgEl("g", { opacity: 0 });
-  lm.appendChild(svgEl("rect", { x: 18, y: 300, width: ansX + 20, height: 54, rx: 10, fill: "#fffafc", stroke: P_ROSE, "stroke-width": 1.8 }));
-  lm.appendChild(svgEl("text", { x: 18 + (ansX + 20) / 2, y: 327, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, "font-weight": 700, fill: P_ROSE, "font-family": PF }, "the same language model: 36 transformer blocks, reading every token"));
-  var loop = svgEl("path", { d: "M" + (ansX + 17) + "," + 300 + " V" + (RY + S + 8), fill: "none", stroke: P_ROSE, "stroke-width": 2.5, "marker-end": "url(#vl-r)" });
-  lm.appendChild(loop);
+  var ANS = ["P", ","], slots = [], outs = [];
+  ANS.forEach(function (a) {
+    var s = chip(a, 30, "#F6D5DF", P_ROSE, "#3A1D2A"); put(s, x, RY);
+    slots.push({ g: s, x: x }); x += 34;
+  });
+  // the language model, which zooms into its 36 layers
+  var lm = svgEl("g", {});
+  var lmBox = svgEl("rect", { x: 40, y: 56, width: 780, height: 180, rx: 12, fill: "#fffafc", stroke: P_ROSE, "stroke-width": 1.8 });
+  lm.appendChild(lmBox);
+  for (var l = 0; l < 10; l++) lm.appendChild(svgEl("line", { x1: 54, x2: 806, y1: 100 + l * 13, y2: 100 + l * 13, stroke: "#f0d9e1", "stroke-width": 6, "stroke-linecap": "round" }));
+  lm.appendChild(svgEl("text", { x: 58, y: 78, "dominant-baseline": "central", "font-size": 15, "font-weight": 700, fill: P_ROSE, "font-family": PF }, "Language model"));
+  lm.appendChild(svgEl("text", { x: 804, y: 78, "text-anchor": "end", "dominant-baseline": "central", "font-size": 13, fill: P_ROSE, "font-family": PF }, "36 layers"));
   svg.appendChild(lm);
-  var mv = makeMover(svg, "vl-glow"); mv.front();
+  xpClick(lm, "stack");
+  svg.appendChild(enc);
+  // generated tokens come out on top and loop back to the end of the row
+  var colP = row[row.length - 1], colC = slots[0].x + 15;
+  ANS.forEach(function (a, i) {
+    var o = chip(a, 30, "#F6D5DF", P_ROSE, "#3A1D2A"); put(o, (i ? colC : colP) - 15, 14); outs.push(o);
+  });
+  var loops = slots.map(function (s, i) {
+    var x0 = (i ? colC : colP) + 15;
+    return svgEl("path", { d: "M" + x0 + ",27 H860 V281 H" + (s.x + 32), fill: "none", stroke: P_ROSE, "stroke-width": 2, "stroke-dasharray": "5 4", "marker-end": "url(#ov-r)", opacity: 0 });
+  });
+  loops.forEach(function (p) { svg.appendChild(p); });
+  var mv = makeMover(svg, "ov-glow"); mv.front();
+  function lerp(p, q, k) { return { x: p.x + (q.x - p.x) * k, y: p.y + (q.y - p.y) * k }; }
+  function placeCrop(t, k) { var p = lerp(t.a, t.b, k), s = P + (30 - P) * k; t.crop.setAttribute("x", p.x); t.crop.setAttribute("y", p.y); t.crop.setAttribute("width", s); t.crop.setAttribute("height", s); }
+  function placeTok(t, k) { var p = lerp(t.c, t.d, k); t.tok.setAttribute("x", p.x); t.tok.setAttribute("y", p.y); }
+  function rise(xc, start, dur) { mv.along(mv.path("M" + xc + "," + (RY - 2) + " V48"), P_ROSE, start, dur, 5); }
 
   var FRAMES = [
-    'A VLM gets a picture and a question. But the language model inside it only reads <b>tokens</b>. So first, the picture has to become tokens too.',
-    'A part called the <b>vision encoder</b> cuts the picture into a grid of small squares. In our VLM, each square is 32 by 32 pixels.',
-    'Each square becomes one <b>image token</b>: a list of numbers that describes what is in that square. The squares are laid out in a row, in reading order.',
-    'The image tokens go into the same row as the words. Two special tokens mark where the image starts and ends, so the model knows which tokens are image and which are text. Then come the words of the question.',
-    'From here on it is the same language model as before. It reads every token in the row, image or word, through its 36 blocks, and writes the answer one token at a time. Each new token, here <span class="tok">T</span>, is added to the end of the row, and the model runs again for the next one. So attention heads can look back at words and at image tokens alike.'
+    'A VLM has two main networks: a <b>vision encoder</b> and a <b>language model</b>. It gets an image and a question, and writes an answer. Press Next to follow the input through the model, or click the language model to zoom in.',
+    'The image is cut into small squares. The vision encoder turns each square into an <b>image token</b>. Two special tokens mark where the image starts and ends.',
+    'The question is split into <b>text tokens</b>. They are placed after the image tokens, so that the image and the question form one row of tokens.',
+    'The language model passes every token in the row up through its 36 <b>layers</b>. Click the language model to see the layers.',
+    'At the top, the last token of the row gives the first token of the answer, <span class="tok">P</span>.',
+    'The new token is added to the end of the row.',
+    'The model runs again on the longer row and generates the next token, <span class="tok">,</span>. Only the new token passes up through the layers. It reads the earlier tokens with attention. The model repeats this until the answer is done.'
   ];
-  makeStepper(document.getElementById("primer-vlm"), FRAMES, function (n) {
+  XP.add("overview", svg, FRAMES, function (n) {
     mv.clear();
-    whole.setAttribute("opacity", n <= 2 ? 1 : 0.15);
-    grid.setAttribute("opacity", n >= 1 && n <= 2 ? 1 : 0);
-    tiles.forEach(function (t) { t.el.setAttribute("opacity", n >= 2 ? 1 : 0); placeTile(t, n >= 2 ? 1 : 0); });
-    [start, end].forEach(function (g) { g.setAttribute("opacity", n >= 3 ? 1 : 0); });
-    words.forEach(function (g) { g.setAttribute("opacity", n >= 3 ? 1 : 0); });
-    lm.setAttribute("opacity", n >= 4 ? 1 : 0);
-    ans.setAttribute("opacity", n >= 4 ? 1 : 0);
+    grid.setAttribute("opacity", n === 1 ? 1 : 0);
+    tiles.forEach(function (t) { t.crop.setAttribute("opacity", 0); placeTok(t, 1); t.tok.setAttribute("opacity", n >= 1 ? 1 : 0); });
+    [imStart, imEnd].forEach(function (g) { g.setAttribute("opacity", n >= 1 ? 1 : 0); });
+    words.forEach(function (w) { put(w.g, w.x, RY); w.g.setAttribute("opacity", n >= 2 ? 1 : 0); });
+    outs[0].setAttribute("opacity", n === 4 ? 1 : 0); outs[1].setAttribute("opacity", 0);
+    slots[0].g.setAttribute("opacity", n >= 5 ? 1 : 0); slots[1].g.setAttribute("opacity", n >= 6 ? 1 : 0);
+    loops[0].setAttribute("opacity", n >= 5 ? 0.6 : 0); loops[1].setAttribute("opacity", n >= 6 ? 0.6 : 0);
     if (mv.reduce) return;
-    if (n === 2) {
-      tiles.forEach(function (t) { placeTile(t, 0); });
-      tiles.forEach(function (t, k) { mv.tween(k * 60, 900, function (e) { placeTile(t, e); }); });
+    if (n === 1) {
+      tiles.forEach(function (t, k) {
+        t.tok.setAttribute("opacity", 0); placeCrop(t, 0); t.crop.setAttribute("opacity", 1);
+        mv.tween(300 + k * 40, 700, function (e) { placeCrop(t, e); t.crop.setAttribute("opacity", 1 - e * e); });
+        mv.at(1100 + k * 40, function () { t.tok.setAttribute("opacity", 1); placeTok(t, 0); });
+        mv.tween(1100 + k * 40, 800, function (e) { placeTok(t, e); });
+      });
+      [imStart, imEnd].forEach(function (g) { g.setAttribute("opacity", 0); mv.at(1900, function () { g.setAttribute("opacity", 1); }); });
     }
-    if (n === 4) { ans.setAttribute("opacity", 0); mv.along(loop, P_ROSE, 300, 900, 7); mv.at(1200, function () { ans.setAttribute("opacity", 1); }); }
+    if (n === 2) words.forEach(function (w, i) {
+      w.g.setAttribute("opacity", 1); put(w.g, w.x, 470);
+      mv.tween(i * 90, 900, function (e) { put(w.g, w.x, 470 + (RY - 470) * e); });
+    });
+    if (n === 3) row.forEach(function (xc, i) { rise(xc, i * 45, 1400); });
+    if (n === 4) { outs[0].setAttribute("opacity", 0); rise(colP, 0, 1300); mv.at(1300, function () { outs[0].setAttribute("opacity", 1); }); }
+    if (n === 5) {
+      outs[0].setAttribute("opacity", 1); slots[0].g.setAttribute("opacity", 0); loops[0].setAttribute("opacity", 0);
+      mv.at(0, function () { loops[0].setAttribute("opacity", 0.6); });
+      mv.along(loops[0], P_ROSE, 100, 1300, 6);
+      mv.at(1400, function () { outs[0].setAttribute("opacity", 0); slots[0].g.setAttribute("opacity", 1); });
+    }
+    if (n === 6) {
+      slots[1].g.setAttribute("opacity", 0); loops[1].setAttribute("opacity", 0);
+      rise(colC, 0, 1300);
+      mv.at(1300, function () { outs[1].setAttribute("opacity", 1); loops[1].setAttribute("opacity", 0.6); });
+      mv.along(loops[1], P_ROSE, 1500, 1200, 6);
+      mv.at(2700, function () { outs[1].setAttribute("opacity", 0); slots[1].g.setAttribute("opacity", 1); });
+    }
     mv.run();
-  }, 4400);
+  }, 4200, { stack: lmBox });
+})();
+
+/* Explorer view 2: the language model as a stack of 36 layers. Each token has its own residual stream running up. */
+(function () {
+  var svg = document.getElementById("stack-svg"); if (!svg) return;
+  blkMarkers(svg, "st");
+  var TOK = [["image", 130], ["Letters", 74], ["in", 34], ["the", 40], ["hearts", 66], ["?", 30]], TY = 516, x = 130, cols = [];
+  TOK.forEach(function (t, i) {
+    var last = i === TOK.length - 1, img = i === 0;
+    svg.appendChild(svgEl("rect", { x: x, y: TY, width: t[1], height: 28, rx: 5, fill: img ? "#fff3d6" : last ? "#F6D5DF" : "#f4f4f4", stroke: img ? "#d8a93a" : last ? P_ROSE : "#ccc", "stroke-width": 1.5 }));
+    svg.appendChild(svgEl("text", { x: x + t[1] / 2, y: TY + 14, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 13, fill: img ? "#7a5a10" : "#333", "font-family": PM }, img ? "image tokens" : t[0]));
+    cols.push(x + t[1] / 2); x += t[1] + 8;
+  });
+  var B0 = 492, STEP = 12.6, BH = 8, bars = [];
+  for (var l = 0; l < 36; l++) {
+    var y = B0 - l * STEP;
+    var bar = svgEl("rect", { x: 110, y: y, width: 690, height: BH, rx: 4, fill: "#f6e4eb" });
+    svg.appendChild(bar); bars.push(bar);
+    if (l === 0 || l === 35 || (l + 1) % 5 === 0) svg.appendChild(svgEl("text", { x: 100, y: y + BH / 2, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: P_GRAY, "font-family": PF }, (l === 0 ? "layer " : "") + (l + 1)));
+  }
+  cols.forEach(function (cx, i) {
+    var last = i === cols.length - 1;
+    svg.appendChild(svgEl("line", { x1: cx, y1: TY, x2: cx, y2: 30, stroke: P_ROSE, "stroke-width": last ? 3.5 : 2.5, opacity: last ? 1 : 0.3, "marker-end": last ? "url(#st-r)" : "" }));
+  });
+  bars.forEach(function (b) { xpClick(b, "block"); });
+  var HL = 19;
+  var mv = makeMover(svg, "st-glow"); mv.front();
+  var FRAMES = [
+    'The language model is a stack of 36 layers. Each token has a vector that holds everything the model has computed about it so far. This vector is called the <b>residual stream</b>. It runs up through every layer, like the lines here.',
+    'Every layer has the same design, called a <b>transformer block</b>. Each layer reads the residual stream and adds its result back. Click any layer to zoom in.'
+  ];
+  XP.add("stack", svg, FRAMES, function (n) {
+    mv.clear();
+    bars.forEach(function (b, i) { b.setAttribute("fill", n === 1 && i === HL ? "#e9a9bf" : "#f6e4eb"); });
+    if (mv.reduce) return;
+    if (n === 0) cols.forEach(function (cx, i) { mv.along(mv.path("M" + cx + "," + TY + " V34"), P_ROSE, i * 120, 1800, i === cols.length - 1 ? 7 : 5); });
+    mv.run();
+  }, 4600, { block: bars[HL] });
+})();
+
+/* Explorer view 6: inside the MLP. The stream of one token fans out to a wide layer, a simple function keeps some
+   numbers and pushes the rest close to zero, and the wide layer fans back in. Cartoon values. */
+(function () {
+  var svg = document.getElementById("mlp-svg"); if (!svg) return;
+  blkMarkers(svg, "ml");
+  var X = 830, NIN = 8, NH = 24;
+  var frame = svgEl("rect", { x: 60, y: 62, width: 720, height: 346, rx: 12, fill: "#f2faf6", stroke: P_GREEN, "stroke-width": 1.6 });
+  svg.appendChild(frame);
+  svg.appendChild(svgEl("text", { x: 76, y: 84, "dominant-baseline": "central", "font-size": 15, "font-weight": 700, fill: P_GREEN, "font-family": PF }, "MLP"));
+  svg.appendChild(svgEl("line", { x1: X, y1: 440, x2: X, y2: 16, stroke: P_ROSE, "stroke-width": 4, "marker-end": "url(#ml-r)" }));
+  svg.appendChild(svgEl("rect", { x: X - 34, y: 440, width: 68, height: 28, rx: 5, fill: "#F6D5DF", stroke: P_ROSE }));
+  svg.appendChild(svgEl("text", { x: X, y: 454, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 14, fill: "#3A1D2A", "font-family": PM }, "it"));
+  function cells(n, w, gap, cx, y) {
+    var x0 = cx - (n * (w + gap) - gap) / 2, out = [];
+    for (var i = 0; i < n; i++) { var r = svgEl("rect", { x: x0 + i * (w + gap), y: y, width: w, height: 24, rx: 4, fill: "#fff", stroke: P_GREEN, "stroke-width": 1.2 }); out.push({ el: r, cx: x0 + i * (w + gap) + w / 2 }); }
+    return out;
+  }
+  var VIN = [0.8, -0.3, 0.5, 0.1, -0.7, 0.9, -0.2, 0.4];
+  var VH = [], VOUT = [0.6, 0.2, -0.5, 0.7, -0.1, 0.3, 0.8, -0.4];
+  for (var i = 0; i < NH; i++) VH.push(Math.sin(i * 2.3 + 1) * 0.9);
+  var fanOut = svgEl("g", { opacity: 0 }), fanIn = svgEl("g", { opacity: 0 });
+  svg.appendChild(fanOut); svg.appendChild(fanIn);
+  var inC = cells(NIN, 28, 4, 420, 362), hC = cells(NH, 24, 4, 420, 220), oC = cells(NIN, 28, 4, 420, 104);
+  inC.forEach(function (a) { hC.forEach(function (b) { fanOut.appendChild(svgEl("line", { x1: a.cx, y1: 362, x2: b.cx, y2: 244, stroke: P_GREEN, "stroke-width": 1, opacity: 0.18 })); }); });
+  hC.forEach(function (a) { oC.forEach(function (b) { fanIn.appendChild(svgEl("line", { x1: a.cx, y1: 220, x2: b.cx, y2: 128, stroke: P_GREEN, "stroke-width": 1, opacity: 0.18 })); }); });
+  inC.concat(hC, oC).forEach(function (c) { svg.appendChild(c.el); });
+  var inP = svgEl("path", { d: "M" + X + ",404 H420 V390", fill: "none", stroke: P_ROSE, "stroke-width": 2.2, "marker-end": "url(#ml-r)" });
+  var outP = svgEl("path", { d: "M420,104 V40 H" + (X - BLK.r - 1), fill: "none", stroke: P_GREEN, "stroke-width": 2.2, "marker-end": "url(#ml-g)" });
+  svg.appendChild(inP); svg.appendChild(outP);
+  svg.appendChild(svgEl("circle", { cx: X, cy: 404, r: 4, fill: P_ROSE }));
+  var plus = svgEl("g", {});
+  plus.appendChild(svgEl("circle", { cx: X, cy: 40, r: BLK.r, fill: "#fff", stroke: P_ROSE, "stroke-width": 2.5 }));
+  plus.appendChild(svgEl("path", { d: "M" + (X - 6) + ",40 H" + (X + 6) + " M" + X + ",34 V46", stroke: P_ROSE, "stroke-width": 2.5, "stroke-linecap": "round" }));
+  svg.appendChild(plus);
+  function shade(v, off) { if (off && v < 0) return "#eeeeee"; var a = Math.min(1, Math.abs(v)); return v >= 0 ? "rgba(0,158,115," + (0.15 + 0.8 * a) + ")" : "rgba(107,107,107," + (0.15 + 0.6 * a) + ")"; }
+  function fill(cs, vals, k, off) { cs.forEach(function (c, i) { c.el.setAttribute("fill", k ? shade(vals[i], off) : "#fff"); }); }
+  var mv = makeMover(svg, "ml-glow"); mv.front();
+  var FRAMES = [
+    'The MLP works on one token at a time. It reads the residual stream of <span class="tok">it</span>, a list of numbers. No information comes in from other tokens.',
+    'First, the MLP fans out. Each number in a much wider layer is a weighted sum of every number in the stream. The weights are learned in training.',
+    'Next, a simple function keeps some numbers in the wide layer and pushes the rest close to zero.',
+    'Then the MLP fans back in. Each output number is a weighted sum of every number in the wide layer, so the output has the same size as the stream.',
+    'The result is added back to the residual stream at the plus.'
+  ];
+  XP.add("mlp", svg, FRAMES, function (n) {
+    mv.clear();
+    fill(inC, VIN, 1); fill(hC, VH, n >= 1, n >= 2); fill(oC, VOUT, n >= 3);
+    fanOut.setAttribute("opacity", n >= 1 ? 1 : 0); fanIn.setAttribute("opacity", n >= 3 ? 1 : 0);
+    if (mv.reduce) return;
+    if (n === 0) { fill(inC, VIN, 0); mv.along(inP, P_ROSE, 0, 1000, 7); mv.at(1000, function () { fill(inC, VIN, 1); }); }
+    if (n === 1) {
+      fill(hC, VH, 0); fanOut.setAttribute("opacity", 0);
+      mv.tween(0, 700, function (e) { fanOut.setAttribute("opacity", e); });
+      hC.forEach(function (c, i) { mv.along(mv.path("M420,362 L" + c.cx + ",244"), P_GREEN, 300 + i * 30, 700, 4); mv.at(1000 + i * 30, function () { c.el.setAttribute("fill", shade(VH[i])); }); });
+    }
+    if (n === 2) { fill(hC, VH, 1, false); hC.forEach(function (c, i) { if (VH[i] < 0) mv.at(400 + i * 40, function () { c.el.setAttribute("fill", shade(VH[i], true)); }); }); }
+    if (n === 3) {
+      fill(oC, VOUT, 0); fanIn.setAttribute("opacity", 0);
+      mv.tween(0, 700, function (e) { fanIn.setAttribute("opacity", e); });
+      oC.forEach(function (c, i) { mv.along(mv.path("M420,220 L" + c.cx + ",128"), P_GREEN, 300 + i * 60, 700, 5); mv.at(1000 + i * 60, function () { c.el.setAttribute("fill", shade(VOUT[i])); }); });
+    }
+    if (n === 4) { mv.along(outP, P_GREEN, 0, 1100, 7); mv.rest(X, 40, P_ROSE, 1100, 7); }
+    mv.run();
+  }, 4200);
+})();
+
+/* Mechanism animation: Bind. The shape token as its stack of 36 layers, the 16 binding heads as dots at their
+   recorded layers, the query and the keys, the match to panel 2, and the patch that moves the pointer to panel 4. */
+function mechPanels(svg, x0, y0, pw, cells) {     // a strip of panels drawn like the page's strips; returns panel centers
+  var out = [];
+  cells.forEach(function (c, i) {
+    var x = x0 + i * pw;
+    svg.appendChild(svgEl("rect", { x: x, y: y0, width: pw, height: pw, fill: "#fff", stroke: "#222", "stroke-width": 1.5 }));
+    var g = svgEl("g", { transform: "translate(" + (x + pw * 0.08) + "," + (y0 + pw * 0.08) + ") scale(" + (pw * 0.84 / 100) + ")" });
+    g.innerHTML = shapeSVG(c[0], c[1]); svg.appendChild(g);
+    out.push({ x: x, cx: x + pw / 2, y: y0, w: pw });
+  });
+  return out;
+}
+function mechGlyph(parent, x, y, mark, color) {    // the plan figure's pointer: a small strip with one panel filled
+  var g = svgEl("g", { opacity: 0 });
+  g.appendChild(svgEl("rect", { x: x - 22, y: y - 8, width: 44, height: 16, rx: 3, fill: "#fff", stroke: "#222", "stroke-width": 1.3 }));
+  for (var j = 0; j < 4; j++) g.appendChild(svgEl("rect", { x: x - 19 + j * 9.75, y: y - 5, width: 8, height: 10, rx: 1.2, fill: j === mark ? color : "#e2e2e2" }));
+  parent.appendChild(g); return g;
+}
+/* Shared scene for the mechanism animations: a strip of panels on top, every token as its column of 36 layers,
+   an answer box above one token, and helpers for heads, curves, the source run, and the orange fill of a patch. */
+var M_VERM = "#D55E00", M_PURPLE = "#7B4FA0";
+function mechScene(svg, o) {
+  var S = { LH: 9, Y0: 524 };
+  S.ly = function (l) { return S.Y0 - (l + 0.5) * S.LH; };
+  var ly = S.ly, LH = S.LH, Y0 = S.Y0;
+  var defs = svgEl("defs", {});
+  [["b", P_BLUE], ["v", M_VERM], ["r", P_ROSE], ["g", P_GREEN], ["p", M_PURPLE]].forEach(function (c) {
+    var m = svgEl("marker", { id: o.id + "-" + c[0], viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 8, markerHeight: 8, markerUnits: "userSpaceOnUse", orient: "auto" });
+    m.appendChild(svgEl("path", { d: "M0,0 L10,5 L0,10 z", fill: c[1] })); defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+  S.mk = function (key) { return "url(#" + o.id + "-" + key + ")"; };
+  var n = o.cells.length, pw = o.pw || 110, x0 = 450 - n * pw / 2;
+  S.P = o.cells.map(function (c, i) {
+    var x = x0 + i * pw;
+    svg.appendChild(svgEl("rect", { x: x, y: 10, width: pw, height: pw, fill: "#fff", stroke: "#222", "stroke-width": 1.5 }));
+    var g = svgEl("g", { transform: "translate(" + (x + pw * 0.08) + "," + (10 + pw * 0.08) + ") scale(" + (pw * 0.84 / 100) + ")" });
+    var html = shapeSVG(c[0], c[1] || "");
+    if (c[2]) html = html.replace('fill="none" stroke="#222"', 'fill="' + c[2] + '" stroke="' + c[2] + '"');
+    g.innerHTML = html; svg.appendChild(g);
+    return { x: x, cx: x + pw / 2, y: 10, w: pw, bottom: 10 + pw };
+  });
+  S.ring = function (i, color) { var p = S.P[i]; var r = svgEl("rect", { x: p.x + 3, y: p.y + 3, width: p.w - 6, height: p.w - 6, rx: 4, fill: "none", stroke: color, "stroke-width": 4, opacity: 0 }); return r; };
+  var gap = o.gap || 98, c0 = 450 - (o.tokens.length - 1) * gap / 2;
+  S.COL = [];
+  o.tokens.forEach(function (t, i) {
+    var x = c0 + i * gap, hi = o.hi && o.hi[i];
+    S.COL.push(x);
+    svg.appendChild(svgEl("rect", { x: x - 7, y: ly(35) - LH / 2, width: 14, height: 36 * LH, rx: 3, fill: hi ? hi[0] : "#f4f4f4", stroke: hi ? hi[1] : "#e2e2e2" }));
+    var w = Math.max(30, t.length * 8.4 + 14);
+    svg.appendChild(svgEl("rect", { x: x - w / 2, y: Y0 + 6, width: w, height: 22, rx: 4, fill: hi ? hi[2] : "#f7f7f7", stroke: hi ? hi[3] : "#cfcfcf", "stroke-width": hi ? 1.5 : 1 }));
+    svg.appendChild(svgEl("text", { x: x, y: Y0 + 17, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: hi ? "#111" : "#888", "font-family": PM }, t));
+    if (o.labels && o.labels[i]) svg.appendChild(svgEl("text", { x: x, y: Y0 + 40, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11, fill: "#888", "font-family": PF }, o.labels[i]));
+  });
+  [0, 10, 20, 30].forEach(function (l) {
+    svg.appendChild(svgEl("text", { x: S.COL[0] - 16, y: ly(l), "text-anchor": "end", "dominant-baseline": "central", "font-size": 10.5, fill: "#aaa", "font-family": PF }, "layer " + l));
+  });
+  // answer boxes above tokens: { at: token index, text }
+  S.answers = (o.answers || []).map(function (a) {
+    var X = S.COL[a.at], Y = ly(35) - 26, w = Math.max(36, a.text.length * 10 + 16);
+    var g = svgEl("g", {}), box = svgEl("rect", { x: X - w / 2, y: Y - 14, width: w, height: 28, rx: 5, fill: "#fff", stroke: "#222", "stroke-width": 1.5 });
+    var tx = svgEl("text", { x: X, y: Y, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 15, "font-weight": 700, fill: "#111", "font-family": PM }, a.text);
+    svg.appendChild(svgEl("path", { d: "M" + X + "," + (ly(35) - LH / 2) + " V" + (Y + 14), stroke: "#999", "stroke-width": 1.5 }));
+    g.appendChild(box); g.appendChild(tx); svg.appendChild(g);
+    var A = { g: g, box: box, text: tx, base: a.text, X: X, Y: Y };
+    A.set = function (t, c) { tx.textContent = t; tx.setAttribute("fill", c || "#111"); box.setAttribute("stroke", c || "#222"); var ww = Math.max(36, t.length * 10 + 16); box.setAttribute("x", X - ww / 2); box.setAttribute("width", ww); };
+    A.pop = function (s) { g.setAttribute("transform", "translate(" + X + "," + Y + ") scale(" + s + ") translate(" + (-X) + "," + (-Y) + ")"); };
+    A.show = function (v) { g.setAttribute("opacity", v); };
+    return A;
+  });
+  if (o.answerLabel !== false && S.answers.length) svg.appendChild(svgEl("text", { x: S.answers[0].X - 30, y: S.answers[0].Y, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: "#888", "font-family": PF }, "answer"));
+  // heads as dots beside a column, stacked away from it at their layers
+  S.dots = function (heads, ci, color, side) {
+    var g = svgEl("g", { opacity: 0 }), seen = {}, xy = [], dir = side === "right" ? 1 : -1;
+    heads.forEach(function (h) {
+      var k = seen[h[0]] = (seen[h[0]] || 0) + 1, x = S.COL[ci] + dir * (7 + k * 8), y = ly(h[0]);
+      g.appendChild(svgEl("circle", { cx: x, cy: y, r: 3.2, fill: color })); xy.push([x, y]);
+    });
+    return { g: g, xy: xy };
+  };
+  // orange fill of residual streams after a patch, one token after another
+  S.fills = function (cols, fromLayer, color) {
+    var rs = cols.map(function (ci) { return svgEl("rect", { x: S.COL[ci] - 7, y: ly(35) - LH / 2, width: 14, height: (35 - fromLayer) * LH + LH / 2, rx: 3, fill: color || M_VERM, opacity: 0 }); });
+    rs.forEach(function (r) { svg.appendChild(r); });
+    return function (k) { rs.forEach(function (r, i) { r.setAttribute("opacity", 0.26 * Math.max(0, Math.min(1, k * rs.length - i))); }); };
+  };
+  // the source run box, with a line that feeds a point
+  S.source = function (x, y, line1, line2) {
+    var g = svgEl("g", { opacity: 0 });
+    g.appendChild(svgEl("rect", { x: x, y: y - 20, width: 150, height: 40, rx: 8, fill: "#fdf0e8", stroke: M_VERM, "stroke-width": 1.5 }));
+    g.appendChild(svgEl("text", { x: x + 75, y: y - 7, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: M_VERM, "font-family": PF }, line1));
+    g.appendChild(svgEl("text", { x: x + 75, y: y + 9, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11.5, fill: M_VERM, "font-family": PF }, line2));
+    return g;
+  };
+  S.path = function (d, color, w, key, dash) { var p = svgEl("path", { d: d, fill: "none", stroke: color, "stroke-width": w || 2.2, opacity: 0 }); if (key) p.setAttribute("marker-end", S.mk(key)); if (dash) p.setAttribute("stroke-dasharray", dash); return p; };
+  S.recolor = function (p, color, key) { p.setAttribute("stroke", color); if (p.getAttribute("marker-end")) p.setAttribute("marker-end", S.mk(key)); };
+  S.pulse = function (mv, p, start, base) { mv.tween(start, 900, function (e) { var s = Math.sin(e * Math.PI * 2); p.setAttribute("stroke-width", base + 3.2 * s * s); }); };
+  return S;
+}
+function mechBadge(parent, x, y, letter, color) {  // the plan figure's letter read from a panel
+  var g = svgEl("g", { opacity: 0 });
+  g.appendChild(svgEl("circle", { cx: x, cy: y, r: 11, fill: "#fff", stroke: color, "stroke-width": 2 }));
+  g.appendChild(svgEl("text", { x: x, y: y + 0.5, "text-anchor": "middle", "dominant-baseline": "central", "font-size": letter.length > 1 ? 9 : 13, "font-weight": 700, fill: "#111", "font-family": PM }, letter));
+  parent.appendChild(g); return g;
+}
+function mechProgress(parent, x, y, upto, n) {     // the plan figure's progress: panels up to here striped
+  var g = svgEl("g", { opacity: 0 }), w = 8 + n * 9.75;
+  g.appendChild(svgEl("rect", { x: x - w / 2, y: y - 8, width: w, height: 16, rx: 3, fill: "#fff", stroke: "#222", "stroke-width": 1.3 }));
+  for (var j = 0; j < n; j++) {
+    var r = svgEl("rect", { x: x - w / 2 + 3 + j * 9.75, y: y - 5, width: 8, height: 10, rx: 1.2, fill: j <= upto ? "#222" : "#e2e2e2", opacity: j <= upto ? 0.55 : 1 });
+    g.appendChild(r);
+  }
+  parent.appendChild(g); return g;
+}
+function mechGlyphN(parent, x, y, mark, color, n) {  // a pointer glyph for n panels
+  var g = svgEl("g", { opacity: 0 }), w = 8 + n * 9.75;
+  g.appendChild(svgEl("rect", { x: x - w / 2, y: y - 8, width: w, height: 16, rx: 3, fill: "#fff", stroke: "#222", "stroke-width": 1.3 }));
+  for (var j = 0; j < n; j++) g.appendChild(svgEl("rect", { x: x - w / 2 + 3 + j * 9.75, y: y - 5, width: 8, height: 10, rx: 1.2, fill: j === mark ? color : "#e2e2e2" }));
+  parent.appendChild(g); return g;
+}
+
+(function () {
+  var svg = document.getElementById("mb-svg"); if (!svg) return;
+  var BLUE = P_BLUE, VERM = "#D55E00";
+  var HEADS = [[18, 15], [21, 11], [17, 4], [19, 27], [15, 9], [19, 24], [21, 18], [15, 11], [15, 2], [17, 7], [20, 29], [21, 8], [16, 27], [20, 15], [17, 15], [18, 11]];
+  var Y0 = 524, LH = 9;
+  function ly(l) { return Y0 - (l + 0.5) * LH; }
+  var defs = svgEl("defs", {});
+  [["mb-b", BLUE], ["mb-v", VERM]].forEach(function (c) {
+    var m = svgEl("marker", { id: c[0], viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 8, markerHeight: 8, markerUnits: "userSpaceOnUse", orient: "auto" });
+    m.appendChild(svgEl("path", { d: "M0,0 L10,5 L0,10 z", fill: c[1] })); defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+  var P = mechPanels(svg, 230, 10, 110, [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]]);
+  // every token as its column of 36 layers; the shape token in color, the rest in gray
+  var TOK = ["the", "letter", "inside", "the", "star", "?", "Answer", ":"], SI = 4, CI = 7, COL = [];
+  TOK.forEach(function (t, i) {
+    var x = 130 + i * 98, on = i === SI;
+    COL.push(x);
+    svg.appendChild(svgEl("rect", { x: x - 7, y: ly(35) - LH / 2, width: 14, height: 36 * LH, rx: 3, fill: on ? "#eef5fb" : "#f4f4f4", stroke: on ? "#9cc3df" : "#e2e2e2" }));
+    var w = Math.max(30, t.length * 8.4 + 14);
+    svg.appendChild(svgEl("rect", { x: x - w / 2, y: Y0 + 6, width: w, height: 22, rx: 4, fill: on ? "#DCEEFA" : "#f7f7f7", stroke: on ? BLUE : "#cfcfcf", "stroke-width": on ? 1.5 : 1 }));
+    svg.appendChild(svgEl("text", { x: x, y: Y0 + 17, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, fill: on ? "#111" : "#888", "font-family": PM }, t));
+  });
+  svg.appendChild(svgEl("text", { x: COL[SI], y: Y0 + 40, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11, fill: "#888", "font-family": PF }, "the shape token"));
+  svg.appendChild(svgEl("text", { x: COL[CI], y: Y0 + 40, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11, fill: "#888", "font-family": PF }, "the colon token"));
+  [0, 10, 20, 30].forEach(function (l) {
+    svg.appendChild(svgEl("text", { x: COL[0] - 16, y: ly(l), "text-anchor": "end", "dominant-baseline": "central", "font-size": 10.5, fill: "#aaa", "font-family": PF }, "layer " + l));
+  });
+  // the answer, generated at the colon token
+  var ansBox = svgEl("rect", { x: COL[CI] - 18, y: ly(35) - 40, width: 36, height: 28, rx: 5, fill: "#fff", stroke: "#222", "stroke-width": 1.5 });
+  var ansText = svgEl("text", { x: COL[CI], y: ly(35) - 26, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 16, "font-weight": 700, fill: "#111", "font-family": PM }, "T");
+  svg.appendChild(svgEl("path", { d: "M" + COL[CI] + "," + (ly(35) - LH / 2) + " V" + (ly(35) - 10), stroke: "#999", "stroke-width": 1.5 }));
+  var ansG = svgEl("g", {}); ansG.appendChild(ansBox); ansG.appendChild(ansText); svg.appendChild(ansG);
+  var AX = COL[CI], AY = ly(35) - 26;
+  function pop(s) { ansG.setAttribute("transform", "translate(" + AX + "," + AY + ") scale(" + s + ") translate(" + (-AX) + "," + (-AY) + ")"); }
+  svg.appendChild(svgEl("text", { x: COL[CI] - 26, y: ly(35) - 26, "text-anchor": "end", "dominant-baseline": "central", "font-size": 11, fill: "#888", "font-family": PF }, "answer"));
+  // the patch spreads to every later token above the patched layers
+  var fills = [];
+  for (var i = SI; i < TOK.length; i++) { var r = svgEl("rect", { x: COL[i] - 7, y: ly(35) - LH / 2, width: 14, height: (35 - 15) * LH + LH / 2, rx: 3, fill: VERM, opacity: 0 }); svg.appendChild(r); fills.push(r); }
+  function setFills(k) { fills.forEach(function (r, i) { r.setAttribute("opacity", 0.26 * Math.max(0, Math.min(1, k * fills.length - i))); }); }
+  // the binding heads at the shape token
+  var dots = svgEl("g", { opacity: 0 }), seen = {}, dotXY = [];
+  HEADS.forEach(function (h) {
+    var k = seen[h[0]] = (seen[h[0]] || 0) + 1;
+    var x = COL[SI] - 7 - k * 8.5, y = ly(h[0]);
+    dots.appendChild(svgEl("circle", { cx: x, cy: y, r: 3.3, fill: BLUE })); dotXY.push([x, y]);
+  });
+  // the query and the keys
+  var query = svgEl("g", { opacity: 0 });
+  query.appendChild(svgEl("path", { d: "M" + (COL[SI] - 22) + "," + ly(14.5) + " V" + ly(9), stroke: BLUE, "stroke-width": 1.5, "stroke-dasharray": "4 3", fill: "none" }));
+  query.appendChild(svgEl("rect", { x: COL[SI] - 88, y: ly(9) - 2, width: 132, height: 26, rx: 13, fill: "#DCEEFA", stroke: BLUE, "stroke-width": 1.5 }));
+  query.appendChild(svgEl("text", { x: COL[SI] - 22, y: ly(9) + 11, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12.5, "font-weight": 700, fill: BLUE, "font-family": PF }, "query: a star?"));
+  var keys = svgEl("g", { opacity: 0 });
+  ["plus", "star", "heart", "circle"].forEach(function (k, i) {
+    var cx = P[i].cx, y = P[i].y + P[i].w + 14;
+    keys.appendChild(svgEl("rect", { x: cx - 34, y: y - 10, width: 68, height: 20, rx: 10, fill: "#fff", stroke: BLUE, "stroke-width": 1.2 }));
+    keys.appendChild(svgEl("text", { x: cx, y: y, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11, fill: BLUE, "font-family": PF }, "key: " + k));
+  });
+  function ring(i, color) { return svgEl("rect", { x: P[i].x + 3, y: P[i].y + 3, width: P[i].w - 6, height: P[i].w - 6, rx: 4, fill: "none", stroke: color, "stroke-width": 4 }); }
+  // reading: curves from panel 2 into the heads
+  var read = svgEl("g", { opacity: 0 }), curves = [];
+  read.appendChild(ring(1, BLUE));
+  dotXY.forEach(function (d) {
+    var px = P[1].cx, py = P[1].y + P[1].w;
+    var c = svgEl("path", { d: "M" + px + "," + py + " C" + px + "," + (py + 90) + " " + (d[0] - 50) + "," + (d[1] - 50) + " " + d[0] + "," + d[1], fill: "none", stroke: BLUE, "stroke-width": 1.2, opacity: 0.45 });
+    read.appendChild(c); curves.push(c);
+  });
+  // writing: from the heads into the residual stream of the shape token
+  var WX = COL[SI] - 7 - 3 * 8.5 - 6, writeD = "M" + WX + "," + ly(17.5) + " C" + (WX - 75) + "," + ly(19) + " " + (WX - 50) + "," + ly(29) + " " + (COL[SI] - 9) + "," + ly(24);
+  var writeB = svgEl("path", { d: writeD, fill: "none", stroke: BLUE, "stroke-width": 2.4, "marker-end": "url(#mb-b)", opacity: 0 });
+  var pointer = mechGlyph(svg, COL[SI] + 34, ly(21), 1, "#222");
+  // the source run feeds into the heads' blue write line, which turns orange
+  var src = svgEl("g", { opacity: 0 });
+  src.appendChild(svgEl("rect", { x: 26, y: ly(31) - 18, width: 150, height: 40, rx: 8, fill: "#fdf0e8", stroke: VERM, "stroke-width": 1.5 }));
+  src.appendChild(svgEl("text", { x: 101, y: ly(31) - 6, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 12, "font-weight": 700, fill: VERM, "font-family": PF }, "source run"));
+  src.appendChild(svgEl("text", { x: 101, y: ly(31) + 10, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 11.5, fill: VERM, "font-family": PF }, "heart in panel 4"));
+  svg.appendChild(read); svg.appendChild(keys); svg.appendChild(query); svg.appendChild(dots); svg.appendChild(writeB); svg.appendChild(src);
+  var wl = writeB.getTotalLength(), wm = writeB.getPointAtLength(wl * 0.45);
+  var feed = svgEl("path", { d: "M176," + ly(31) + " C" + (wm.x - 120) + "," + ly(31) + " " + (wm.x - 40) + "," + (wm.y - 30) + " " + (wm.x - 3) + "," + (wm.y - 3), fill: "none", stroke: VERM, "stroke-width": 2.2, "marker-end": "url(#mb-v)" });
+  src.appendChild(feed);
+  function writeColor(c) { writeB.setAttribute("stroke", c === VERM ? VERM : BLUE); writeB.setAttribute("marker-end", c === VERM ? "url(#mb-v)" : "url(#mb-b)"); }
+  var ring4 = ring(3, VERM); ring4.setAttribute("opacity", 0); svg.appendChild(ring4);
+  var pointerSrc = mechGlyph(svg, COL[SI] + 34, ly(21), 3, VERM);
+  svg.appendChild(pointer); svg.appendChild(pointerSrc);
+  var mv = makeMover(svg, "mb-glow"); mv.front();
+  var FRAMES = [
+    'Each token of the question is drawn as its stack of 36 layers. The question names a shape, <span class="tok">star</span>, not a panel. To answer, the model first has to find which panel holds a star. The answer is generated at the colon token, on the right.',
+    'The <b>binding heads</b> sit at layers 15 to 21 of the shape token. Each dot is one of the 16 heads, drawn at its layer.',
+    'Each binding head forms a <b>query</b> at the shape token, roughly <i>"I need to look for stars"</i>.',
+    'Each image token offers a <b>key</b>, roughly <i>"I am the panel with the star"</i>, or the heart, or the circle.',
+    'The query matches the keys of panel 2, so the binding heads attend to it. They write a <b>pointer</b>, <i>"look in panel 2"</i>, into the residual stream of the shape token. Later, the model follows this pointer and answers <span class="tok">T</span>.',
+    'To test this, we patch the outputs of the 16 binding heads from a source run, whose heart sits in panel 4. The heads still look at panel 2 of the target, but what they write into the shape token now comes from the source. The pointer to panel 2 is replaced by a pointer to panel 4.',
+    'The patched pointer flows on through the later tokens. At the colon token, the model follows it to panel 4 of its own image and answers <span class="tok">K</span>. This happens in 85.9% of cases. Random heads from the same layers do so in at most 0.1%.'
+  ];
+  makeStepper(document.getElementById("mech-bind"), FRAMES, function (n) {
+    mv.clear();
+    dots.setAttribute("opacity", n >= 1 ? 1 : 0);
+    query.setAttribute("opacity", n >= 2 && n <= 4 ? 1 : 0);
+    keys.setAttribute("opacity", n >= 3 && n <= 4 ? 1 : 0);
+    read.setAttribute("opacity", n === 4 ? 1 : n >= 5 ? 0.5 : 0);
+    writeB.setAttribute("opacity", n >= 4 ? 1 : 0); writeB.setAttribute("stroke-width", 2.4); writeColor(n >= 5 ? VERM : BLUE);
+    pointer.setAttribute("opacity", n === 4 ? 1 : 0);
+    src.setAttribute("opacity", n >= 5 ? 1 : 0);
+    pointerSrc.setAttribute("opacity", n >= 5 ? 1 : 0);
+    setFills(n === 6 ? 1 : 0); pop(1);
+    ring4.setAttribute("opacity", n === 6 ? 1 : 0);
+    ansText.textContent = n === 6 ? "K" : "T"; ansText.setAttribute("fill", n === 6 ? VERM : "#111"); ansBox.setAttribute("stroke", n === 6 ? VERM : "#222");
+    if (mv.reduce) return;
+    if (n === 1) { dots.setAttribute("opacity", 0); mv.tween(0, 700, function (e) { dots.setAttribute("opacity", e); }); }
+    if (n === 4) {
+      read.setAttribute("opacity", 0); writeB.setAttribute("opacity", 0); pointer.setAttribute("opacity", 0);
+      mv.tween(0, 500, function (e) { read.setAttribute("opacity", e); });
+      curves.forEach(function (c, i) { mv.along(c, BLUE, 200 + i * 40, 900, 4); });
+      mv.at(1500, function () { writeB.setAttribute("opacity", 1); });
+      mv.along(writeB, BLUE, 1500, 700, 6);
+      mv.at(2200, function () { pointer.setAttribute("opacity", 1); });
+    }
+    if (n === 5) {
+      writeColor(BLUE); src.setAttribute("opacity", 0); pointer.setAttribute("opacity", 1); pointerSrc.setAttribute("opacity", 0);
+      mv.tween(0, 500, function (e) { src.setAttribute("opacity", e); });
+      mv.along(feed, VERM, 400, 900, 6);
+      mv.tween(1300, 900, function (e) { writeB.setAttribute("stroke-width", 2.4 + 3.2 * Math.sin(e * Math.PI * 2) * Math.sin(e * Math.PI * 2)); });
+      mv.at(1750, function () { writeColor(VERM); });
+      mv.along(writeB, VERM, 2200, 700, 6);
+      mv.tween(2700, 900, function (e) { pointer.setAttribute("opacity", 1 - e); pointerSrc.setAttribute("opacity", e); });
+    }
+    if (n === 6) {
+      ring4.setAttribute("opacity", 0); ansText.textContent = "T"; ansText.setAttribute("fill", "#111"); ansBox.setAttribute("stroke", "#222");
+      mv.tween(0, 2200, setFills);
+      mv.at(2300, function () { ansText.textContent = "K"; ansText.setAttribute("fill", VERM); ansBox.setAttribute("stroke", VERM); });
+      mv.tween(2300, 500, function (e) { pop(1 + 0.45 * Math.sin(e * Math.PI)); });
+      mv.tween(2900, 500, function (e) { ring4.setAttribute("opacity", e); });
+    }
+    mv.run();
+  }, 5200);
+})();
+
+/* Mechanism animation: Relay. The relay heads at the colon token read the pointer from the shape token. */
+(function () {
+  var svg = document.getElementById("mr-svg"); if (!svg) return;
+  var RELAY = [[22, 10], [22, 11], [35, 25], [23, 26], [25, 15], [19, 21], [34, 28], [23, 0], [20, 2], [20, 3], [23, 3], [25, 12], [28, 22], [21, 19], [22, 3], [22, 0]];
+  var S = mechScene(svg, { id: "mr", cells: [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]],
+    tokens: ["the", "letter", "inside", "the", "star", "?", "Answer", ":"],
+    hi: { 4: ["#eef5fb", "#9cc3df", "#DCEEFA", P_BLUE], 7: ["#f8eef2", "#dcb6c6", "#F6E3EA", P_ROSE] },
+    labels: { 4: "the shape token", 7: "the colon token" }, answers: [{ at: 7, text: "T" }] });
+  var ly = S.ly, C = S.COL, A = S.answers[0];
+  var ptrStar = mechGlyph(svg, C[4] + 34, ly(18), 1, "#222");
+  var dots = S.dots(RELAY, 7, P_ROSE, "left");
+  var read = svgEl("g", {}), reads = dots.xy.map(function (d) {
+    var x0 = C[4] + 8, y0 = ly(18), p = S.path("M" + x0 + "," + y0 + " Q" + ((x0 + d[0]) / 2) + "," + (Math.min(y0, d[1]) - 70) + " " + (d[0] - 4) + "," + d[1], P_ROSE, 1.3);
+    read.appendChild(p); return p;
+  });
+  var WX = C[7] - 7 - 4 * 8 - 6;
+  var write = S.path("M" + WX + "," + ly(21) + " C" + (WX - 60) + "," + ly(23) + " " + (WX - 40) + "," + ly(31) + " " + (C[7] - 9) + "," + ly(26), P_ROSE, 2.4, "r");
+  var ptrColon = mechGlyph(svg, C[7] + 34, ly(25), 1, "#222");
+  var ptrColonSrc = mechGlyph(svg, C[7] + 34, ly(25), 3, M_VERM);
+  var src = S.source(26, ly(31), "source run", "heart in panel 4");
+  var mid = null;
+  var ring4 = S.ring(3, M_VERM), fill = S.fills([7], 19);
+  [read, dots.g, write, src, ring4, ptrColon, ptrColonSrc].forEach(function (e) { svg.appendChild(e); });
+  var mv = makeMover(svg, "mr-glow"); mv.front();
+  function feedPath() {
+    if (mid) return mid;
+    var r = reads[0], L = r.getTotalLength(), m = r.getPointAtLength(L * 0.5);
+    mid = S.path("M176," + ly(31) + " C" + (m.x - 120) + "," + ly(31) + " " + (m.x - 30) + "," + (m.y - 40) + " " + (m.x - 2) + "," + (m.y - 3), M_VERM, 2.2, "v");
+    src.appendChild(mid); mid.setAttribute("opacity", 1); return mid;
+  }
+  var FRAMES = [
+    'The binding heads wrote the pointer, <i>"look in panel 2"</i>, into the shape token. The answer is generated at the colon token, at the end of the question. Attention is the only way to move the pointer there.',
+    'The <b>relay heads</b> sit at the colon token, mostly at layers 19 to 23. Each dot is one of the 16 relay heads, drawn at its layer.',
+    'The relay heads read the earlier tokens, mostly the shape token, where the pointer is. They write the pointer into the residual stream of the colon token.',
+    'To test this, we patch only the values that the relay heads read, from a source run whose heart sits in panel 4. Their queries and keys stay the same. The pointer to panel 2 is replaced by a pointer to panel 4.',
+    'The patched pointer fills the colon token. The model follows it to panel 4 of its own image and answers <span class="tok">K</span>. This happens in 87.5% of cases.'
+  ];
+  makeStepper(document.getElementById("mech-relay"), FRAMES, function (n) {
+    mv.clear(); feedPath();
+    ptrStar.setAttribute("opacity", 1);
+    dots.g.setAttribute("opacity", n >= 1 ? 1 : 0);
+    reads.forEach(function (r) { r.setAttribute("opacity", n >= 2 ? 0.55 : 0); r.setAttribute("stroke-width", 1.3); S.recolor(r, n >= 3 ? M_VERM : P_ROSE); });
+    write.setAttribute("opacity", n >= 2 ? 1 : 0);
+    ptrColon.setAttribute("opacity", n === 2 ? 1 : 0); ptrColonSrc.setAttribute("opacity", n >= 3 ? 1 : 0);
+    src.setAttribute("opacity", n >= 3 ? 1 : 0);
+    fill(n === 4 ? 1 : 0); A.pop(1); ring4.setAttribute("opacity", n === 4 ? 1 : 0);
+    if (n === 4) A.set("K", M_VERM); else A.set("T");
+    if (mv.reduce) return;
+    if (n === 1) { dots.g.setAttribute("opacity", 0); mv.tween(0, 700, function (e) { dots.g.setAttribute("opacity", e); }); }
+    if (n === 2) {
+      reads.forEach(function (r) { r.setAttribute("opacity", 0); }); write.setAttribute("opacity", 0); ptrColon.setAttribute("opacity", 0);
+      mv.tween(0, 500, function (e) { reads.forEach(function (r) { r.setAttribute("opacity", 0.55 * e); }); });
+      reads.forEach(function (r, i) { mv.along(r, P_ROSE, 200 + i * 50, 1000, 4); });
+      mv.at(1800, function () { write.setAttribute("opacity", 1); });
+      mv.along(write, P_ROSE, 1800, 700, 6);
+      mv.at(2500, function () { ptrColon.setAttribute("opacity", 1); });
+    }
+    if (n === 3) {
+      reads.forEach(function (r) { S.recolor(r, P_ROSE); }); src.setAttribute("opacity", 0); ptrColon.setAttribute("opacity", 1); ptrColonSrc.setAttribute("opacity", 0);
+      mv.tween(0, 500, function (e) { src.setAttribute("opacity", e); });
+      mv.along(mid, M_VERM, 400, 900, 6);
+      mv.tween(1300, 900, function (e) { var s = Math.sin(e * Math.PI * 2); reads.forEach(function (r) { r.setAttribute("stroke-width", 1.3 + 2.4 * s * s); }); });
+      mv.at(1750, function () { reads.forEach(function (r) { S.recolor(r, M_VERM); }); });
+      reads.forEach(function (r, i) { mv.along(r, M_VERM, 2200 + i * 30, 800, 4); });
+      mv.tween(3000, 900, function (e) { ptrColon.setAttribute("opacity", 1 - e); ptrColonSrc.setAttribute("opacity", e); });
+    }
+    if (n === 4) {
+      ring4.setAttribute("opacity", 0); A.set("T");
+      mv.tween(0, 1000, fill);
+      mv.at(1100, function () { A.set("K", M_VERM); });
+      mv.tween(1100, 500, function (e) { A.pop(1 + 0.45 * Math.sin(e * Math.PI)); });
+      mv.tween(1700, 500, function (e) { ring4.setAttribute("opacity", e); });
+    }
+    mv.run();
+  }, 5200);
+})();
+
+/* Mechanism animation: Gaze. The gaze heads at the colon token follow the pointer back to its panel. */
+(function () {
+  var svg = document.getElementById("mg-svg"); if (!svg) return;
+  var GAZE = [[24, 29], [34, 7], [23, 4], [24, 31], [29, 5], [24, 23], [26, 26], [29, 6], [22, 0], [22, 11], [21, 18], [24, 5], [21, 11], [33, 31], [32, 10], [29, 11], [24, 30], [32, 8], [23, 30], [28, 0], [34, 28], [32, 11], [27, 18], [29, 12], [21, 8], [24, 13], [29, 8], [30, 6], [20, 15], [29, 10], [21, 19], [19, 3]];
+  var S = mechScene(svg, { id: "mg", cells: [["plus", "R"], ["star", "T"], ["heart", "P"], ["circle", "K"]],
+    tokens: ["the", "letter", "inside", "the", "star", "?", "Answer", ":"],
+    hi: { 7: ["#eef8f4", "#a6d9c6", "#DDF2EA", P_GREEN] },
+    labels: { 7: "the colon token" }, answers: [{ at: 7, text: "T" }] });
+  var ly = S.ly, C = S.COL, A = S.answers[0], P = S.P;
+  var ptr = mechGlyph(svg, C[7] + 34, ly(25), 1, "#222");
+  var dots = S.dots(GAZE, 7, P_GREEN, "left");
+  function curves(panel, color) {
+    var g = svgEl("g", { opacity: 0 }), ps = dots.xy.map(function (d) {
+      var px = P[panel].cx, py = P[panel].bottom;
+      var p = svgEl("path", { d: "M" + px + "," + py + " C" + px + "," + (py + 110) + " " + (d[0] - 60) + "," + (d[1] - 40) + " " + (d[0] - 4) + "," + d[1], fill: "none", stroke: color, "stroke-width": 1.1, opacity: 0.4 });
+      g.appendChild(p); return p;
+    });
+    svg.appendChild(g); return { g: g, ps: ps };
+  }
+  var look2 = curves(1, P_GREEN), look4 = curves(3, M_VERM);
+  var down2 = S.path("M" + P[1].cx + "," + (P[1].bottom + 4) + " C" + P[1].cx + "," + (P[1].bottom + 160) + " " + (C[7] - 40) + "," + ly(36) + " " + (C[7] - 9) + "," + ly(31), P_GREEN, 2.2, "g");
+  var down4 = S.path("M" + P[3].cx + "," + (P[3].bottom + 4) + " C" + P[3].cx + "," + (P[3].bottom + 120) + " " + (C[7] - 30) + "," + ly(36) + " " + (C[7] - 9) + "," + ly(31), M_VERM, 2.2, "v");
+  var badgeT = mechBadge(svg, C[7] + 34, ly(31), "T", P_GREEN), badgeK = mechBadge(svg, C[7] + 34, ly(31), "K", M_VERM);
+  var src = S.source(26, ly(27), "source run", "heart in panel 4");
+  var feed = S.path("M176," + ly(27) + " C" + (C[7] - 220) + "," + ly(27) + " " + (C[7] - 120) + "," + ly(26) + " " + (C[7] - 62) + "," + ly(26), M_VERM, 2.2, "v");
+  src.appendChild(feed); feed.setAttribute("opacity", 1);
+  var ring4 = S.ring(3, M_VERM), ring2 = S.ring(1, P_GREEN), fill = S.fills([7], 19);
+  [dots.g, down2, down4, src, ring2, ring4, ptr].forEach(function (e) { svg.appendChild(e); });
+  var mv = makeMover(svg, "mg-glow"); mv.front();
+  var FRAMES = [
+    'The colon token now holds the pointer, <i>"look in panel 2"</i>. To answer, the model still has to read the letter in that panel.',
+    'The <b>gaze heads</b> sit at the colon token, at layers 19 to 34. Each dot is one of the 32 gaze heads, drawn at its layer.',
+    'The pointer sets the queries of the gaze heads, so they attend to panel 2 and bring back what is drawn there, <span class="tok">T</span>.',
+    'To test this, we patch only the queries of the 32 gaze heads, from a source run whose heart sits in panel 4. The gaze heads now look at panel 4 of the target image.',
+    'They bring back the letter in panel 4, and the target answers <span class="tok">K</span>. This happens in 74.0% of cases. Random heads from the same layers do so in 0.0%.'
+  ];
+  makeStepper(document.getElementById("mech-gaze"), FRAMES, function (n) {
+    mv.clear();
+    ptr.setAttribute("opacity", 1);
+    dots.g.setAttribute("opacity", n >= 1 ? 1 : 0);
+    look2.g.setAttribute("opacity", n === 2 ? 1 : 0); ring2.setAttribute("opacity", n === 2 ? 1 : 0);
+    down2.setAttribute("opacity", n === 2 ? 1 : 0); badgeT.setAttribute("opacity", n === 2 ? 1 : 0);
+    look4.g.setAttribute("opacity", n >= 3 ? 1 : 0); src.setAttribute("opacity", n >= 3 ? 1 : 0);
+    down4.setAttribute("opacity", n === 4 ? 1 : 0); badgeK.setAttribute("opacity", n === 4 ? 1 : 0);
+    fill(n === 4 ? 1 : 0); A.pop(1); ring4.setAttribute("opacity", n === 4 ? 1 : 0);
+    if (n === 4) A.set("K", M_VERM); else A.set("T");
+    if (mv.reduce) return;
+    if (n === 1) { dots.g.setAttribute("opacity", 0); mv.tween(0, 700, function (e) { dots.g.setAttribute("opacity", e); }); }
+    if (n === 2) {
+      look2.g.setAttribute("opacity", 0); down2.setAttribute("opacity", 0); badgeT.setAttribute("opacity", 0); ring2.setAttribute("opacity", 0);
+      mv.tween(0, 600, function (e) { look2.g.setAttribute("opacity", e); ring2.setAttribute("opacity", e); });
+      look2.ps.forEach(function (p, i) { mv.along(p, P_GREEN, 100 + i * 25, 900, 3.5, true); });
+      mv.at(1500, function () { down2.setAttribute("opacity", 1); });
+      mv.along(down2, P_GREEN, 1500, 900, 6);
+      mv.at(2400, function () { badgeT.setAttribute("opacity", 1); });
+    }
+    if (n === 3) {
+      look4.g.setAttribute("opacity", 0); look2.g.setAttribute("opacity", 1); src.setAttribute("opacity", 0);
+      mv.tween(0, 500, function (e) { src.setAttribute("opacity", e); });
+      mv.along(feed, M_VERM, 400, 900, 6);
+      mv.tween(1300, 900, function (e) { var s = Math.sin(e * Math.PI * 2); look2.ps.forEach(function (p) { p.setAttribute("stroke-width", 1.1 + 2.2 * s * s); }); });
+      mv.tween(2200, 900, function (e) { look2.g.setAttribute("opacity", 1 - e); look4.g.setAttribute("opacity", e); });
+    }
+    if (n === 4) {
+      down4.setAttribute("opacity", 0); badgeK.setAttribute("opacity", 0); ring4.setAttribute("opacity", 0); A.set("T");
+      look4.ps.forEach(function (p, i) { mv.along(p, M_VERM, i * 25, 900, 3.5, true); });
+      mv.at(1000, function () { down4.setAttribute("opacity", 1); });
+      mv.along(down4, M_VERM, 1000, 900, 6);
+      mv.at(1900, function () { badgeK.setAttribute("opacity", 1); });
+      mv.tween(1900, 900, fill);
+      mv.at(2800, function () { A.set("K", M_VERM); });
+      mv.tween(2800, 500, function (e) { A.pop(1 + 0.45 * Math.sin(e * Math.PI)); });
+      mv.tween(3400, 500, function (e) { ring4.setAttribute("opacity", e); });
+    }
+    mv.run();
+  }, 5200);
+})();
+
+/* Mechanism animation: Language. The gaze heads bring back the shape, and the language heads add the language. */
+(function () {
+  var svg = document.getElementById("mlang-svg"); if (!svg) return;
+  var GAZE = [[24, 29], [34, 7], [23, 4], [24, 31], [29, 5], [24, 23], [26, 26], [29, 6], [22, 0], [22, 11], [21, 18], [24, 5], [21, 11], [33, 31], [32, 10], [29, 11], [24, 30], [32, 8], [23, 30], [28, 0], [34, 28], [32, 11], [27, 18], [29, 12], [21, 8], [24, 13], [29, 8], [30, 6], [20, 15], [29, 10], [21, 19], [19, 3]];
+  var LANG = [[24, 27], [32, 17], [22, 31], [20, 27], [30, 20], [31, 2], [35, 25], [35, 26], [31, 24], [31, 26], [34, 15], [22, 19], [22, 8], [24, 25], [35, 5], [19, 21]];
+  var S = mechScene(svg, { id: "mla", cells: [["heart", "", "#D55E00"], ["star", "", P_GREEN], ["circle", "", P_BLUE], ["square", "", "#9a9a9a"]],
+    tokens: ["What", "shape", "is", "the", "green", "marker", "?", ":"],
+    hi: { 7: ["#f3eef8", "#c8b3dc", "#EDE4F5", M_PURPLE] },
+    labels: { 7: "the colon token" }, answers: [{ at: 7, text: "star" }] });
+  var ly = S.ly, C = S.COL, A = S.answers[0], P = S.P;
+  var gz = S.dots(GAZE, 7, P_GREEN, "left"), lg = S.dots(LANG, 7, M_PURPLE, "right");
+  var look = svgEl("g", { opacity: 0 }), lookP = gz.xy.map(function (d) {
+    var px = P[1].cx, py = P[1].bottom;
+    var p = svgEl("path", { d: "M" + px + "," + py + " C" + px + "," + (py + 110) + " " + (d[0] - 60) + "," + (d[1] - 40) + " " + (d[0] - 4) + "," + d[1], fill: "none", stroke: P_GREEN, "stroke-width": 1.1, opacity: 0.4 });
+    look.appendChild(p); return p;
+  });
+  var words = svgEl("g", { opacity: 0 }), wordP = [0, 1, 2].map(function (i) {
+    var x0 = C[i] + 8, y0 = ly(20), x1 = C[7] + 15, y1 = ly(26);
+    var p = svgEl("path", { d: "M" + x0 + "," + y0 + " Q" + ((x0 + x1) / 2) + "," + (ly(36) - 10) + " " + x1 + "," + y1, fill: "none", stroke: M_PURPLE, "stroke-width": 1.4, opacity: 0.5 });
+    words.appendChild(p); return p;
+  });
+  var ring2 = S.ring(1, P_GREEN);
+  var srcG = S.source(26, ly(31), "source run", "German, green circle"), srcL = S.source(26, ly(31), "source run", "asked in German");
+  var feedG = S.path("M176," + ly(31) + " C" + (C[7] - 260) + "," + ly(31) + " " + (C[7] - 120) + "," + ly(27) + " " + (C[7] - 50) + "," + ly(27), M_VERM, 2.2, "v");
+  var feedL = S.path("M176," + ly(31) + " C" + (C[7] - 200) + "," + ly(38) + " " + (C[7] + 10) + "," + ly(40) + " " + (C[7] + 24) + "," + ly(33), M_VERM, 2.2, "v");
+  srcG.appendChild(feedG); feedG.setAttribute("opacity", 1); srcL.appendChild(feedL); feedL.setAttribute("opacity", 1);
+  var fill = S.fills([7], 19);
+  [look, words, gz.g, lg.g, ring2, srcG, srcL].forEach(function (e) { svg.appendChild(e); });
+  var mv = makeMover(svg, "mla-glow"); mv.front();
+  var FRAMES = [
+    'Here, each panel holds a colored shape and no letter. We ask <i>"What shape is the green marker?"</i> in English, German, French, or Chinese, and the model answers in the language of the question.',
+    'The gaze heads attend to the green marker and bring back what they see there, a star.',
+    'A different set of heads adds the language. Each purple dot is one of the 16 <b>language heads</b>, at layers 19 to 35. They read the words of the question.',
+    'Now we patch the outputs of the gaze heads from a source that asks in German about a different image, whose green marker is a circle. The target names the source\'s shape in its own language, <span class="tok">circle</span>, in 82.0% of cases, and never changes the language. The gaze heads bring back the concept, not the word.',
+    'Instead, we patch the outputs of the language heads from a source that asks in German. The target names its own shape in German, <span class="tok">Stern</span>. The language switches in 95.3% of cases, without changing the shape.'
+  ];
+  makeStepper(document.getElementById("mech-lang"), FRAMES, function (n) {
+    mv.clear();
+    gz.g.setAttribute("opacity", n >= 1 ? 1 : 0); look.setAttribute("opacity", n === 1 || n === 2 ? 1 : n >= 3 ? 0.3 : 0); ring2.setAttribute("opacity", n === 1 || n === 2 ? 1 : 0);
+    lg.g.setAttribute("opacity", n >= 2 ? 1 : 0); words.setAttribute("opacity", n >= 2 ? 1 : 0);
+    srcG.setAttribute("opacity", n === 3 ? 1 : 0); srcL.setAttribute("opacity", n === 4 ? 1 : 0);
+    fill(n >= 3 ? 1 : 0); A.pop(1);
+    if (n === 3) A.set("circle", M_VERM); else if (n === 4) A.set("Stern", M_VERM); else A.set("star");
+    if (mv.reduce) return;
+    if (n === 1) {
+      gz.g.setAttribute("opacity", 0); look.setAttribute("opacity", 0); ring2.setAttribute("opacity", 0);
+      mv.tween(0, 600, function (e) { gz.g.setAttribute("opacity", e); look.setAttribute("opacity", e); ring2.setAttribute("opacity", e); });
+      lookP.forEach(function (p, i) { mv.along(p, P_GREEN, 300 + i * 25, 900, 3.5, true); });
+    }
+    if (n === 2) {
+      lg.g.setAttribute("opacity", 0); words.setAttribute("opacity", 0);
+      mv.tween(0, 600, function (e) { lg.g.setAttribute("opacity", e); words.setAttribute("opacity", e); });
+      wordP.forEach(function (p, i) { mv.along(p, M_PURPLE, 300 + i * 200, 1100, 5); });
+    }
+    if (n === 3 || n === 4) {
+      var src = n === 3 ? srcG : srcL, feed = n === 3 ? feedG : feedL, dg = n === 3 ? gz.g : lg.g;
+      src.setAttribute("opacity", 0); fill(0); A.set("star");
+      mv.tween(0, 500, function (e) { src.setAttribute("opacity", e); });
+      mv.along(feed, M_VERM, 400, 900, 6);
+      mv.tween(1300, 800, function (e) { dg.setAttribute("opacity", 1 - 0.6 * Math.sin(e * Math.PI * 2) * Math.sin(e * Math.PI * 2)); });
+      mv.tween(2100, 900, fill);
+      mv.at(3000, function () { A.set(n === 3 ? "circle" : "Stern", M_VERM); });
+      mv.tween(3000, 500, function (e) { A.pop(1 + 0.35 * Math.sin(e * Math.PI)); });
+    }
+    mv.run();
+  }, 5600);
+})();
+
+/* Mechanism animation: Progress. The answer token binds the letter to its panel, the comma token turns it into
+   progress, select picks the next panel; then the comma state is copied into the colon token of a fresh target. */
+(function () {
+  var svg = document.getElementById("mp-svg"); if (!svg) return;
+  var BIND = [[18, 15], [21, 11], [17, 4], [19, 27], [15, 9], [19, 24], [21, 18], [15, 11], [15, 2], [17, 7], [20, 29], [21, 8], [16, 27], [20, 15], [17, 15], [18, 11]];
+  var S = mechScene(svg, { id: "mpg", pw: 90, cells: [["heart", "E"], ["diamond", "M"], ["heart", "U"], ["diamond", "V"], ["heart", "P"], ["heart", "A"]],
+    tokens: ["each", "heart", "?", "Answer", ":", "E", ","], gap: 110,
+    hi: { 4: ["#f4f4f4", "#cfcfcf", "#f7f7f7", "#9a9a9a"], 5: ["#eef5fb", "#9cc3df", "#DCEEFA", P_BLUE], 6: ["#f8eef2", "#dcb6c6", "#F6E3EA", P_ROSE] },
+    labels: { 4: "the colon token", 5: "the answer token", 6: "the comma token" },
+    answers: [{ at: 4, text: "E" }, { at: 6, text: "U" }], answerLabel: false });
+  var ly = S.ly, C = S.COL, P = S.P, A0 = S.answers[0], A1 = S.answers[1];
+  var later = svgEl("g", {});                         // everything after the colon, which the patch test removes
+  var dots = S.dots(BIND, 5, P_BLUE, "left");
+  var read = svgEl("g", { opacity: 0 }), readP = dots.xy.map(function (d) {
+    var px = P[0].cx, py = P[0].bottom;
+    var p = svgEl("path", { d: "M" + px + "," + py + " C" + px + "," + (py + 120) + " " + (d[0] - 60) + "," + (d[1] - 50) + " " + (d[0] - 4) + "," + d[1], fill: "none", stroke: P_BLUE, "stroke-width": 1.1, opacity: 0.45 });
+    read.appendChild(p); return p;
+  });
+  var ring1 = S.ring(0, P_BLUE);
+  var WX = C[5] - 7 - 3 * 8 - 6;
+  var write = S.path("M" + WX + "," + ly(17.5) + " C" + (WX - 60) + "," + ly(19) + " " + (WX - 40) + "," + ly(28) + " " + (C[5] - 9) + "," + ly(23), P_BLUE, 2.4, "b");
+  var ptrE = mechGlyphN(svg, C[5] + 40, ly(19), 0, "#222", 6);
+  var toComma = S.path("M" + (C[5] + 8) + "," + ly(17) + " Q" + ((C[5] + C[6]) / 2) + "," + ly(12) + " " + (C[6] - 9) + "," + ly(19.5), P_ROSE, 2.2, "r");
+  var prog = mechProgress(svg, C[6] + 46, ly(21), 0, 6);
+  var pick = S.path("M" + (C[6] - 6) + "," + ly(26) + " C" + (C[6] - 80) + "," + ly(38) + " " + P[2].cx + "," + (P[2].bottom + 120) + " " + P[2].cx + "," + (P[2].bottom + 4), P_GREEN, 2.2, "g", "5 4");
+  var ring3 = S.ring(2, P_GREEN);
+  [read, dots.g, write, toComma, ring1, ring3, pick].forEach(function (e) { later.appendChild(e); });
+  later.appendChild(ptrE); later.appendChild(prog); svg.appendChild(later);
+  // the patch test: a fresh target that has written nothing; the comma state is copied into its colon token
+  var src = S.source(20, ly(31), "source run", "answered from panel 1");
+  var feed = S.path("M170," + ly(31) + " C" + (C[4] - 160) + "," + ly(31) + " " + (C[4] - 60) + "," + ly(24) + " " + (C[4] - 9) + "," + ly(20.5), M_VERM, 2.4, "v");
+  src.appendChild(feed); feed.setAttribute("opacity", 1);
+  var progColon = mechProgress(svg, C[4] + 46, ly(21), 0, 6);
+  var ring3v = S.ring(2, M_VERM), fill = S.fills([4], 20);
+  [src, ring3v].forEach(function (e) { svg.appendChild(e); });
+  var mv = makeMover(svg, "mpg-glow"); mv.front();
+  var FRAMES = [
+    'In a list, the model writes one letter at a time. It has written <span class="tok">E</span>, from panel 1, and generates the next letter at the comma token.',
+    'At the answer token <span class="tok">E</span>, the binding heads bind the letter just written to the panel it came from. They write a pointer to panel 1.',
+    'The comma token turns that pointer into <b>progress</b>, <i>"done up to panel 1"</i>, at layers 20 and 21.',
+    'The model then selects the nearest matching panel after its progress, panel 3, and writes <span class="tok">U</span>.',
+    'To test this, we copy the comma token at layer 20 from a source run into the colon token of a target that has written nothing yet. The two runs ask for different shapes and share no letter. They share only the panel the source has just answered from, panel 1.',
+    'The target skips panel 1 and starts its list with <span class="tok">U</span>, even though it never answered from panel 1. This happens in 91.0% of cases.'
+  ];
+  makeStepper(document.getElementById("mech-progress"), FRAMES, function (n) {
+    mv.clear();
+    later.setAttribute("opacity", n >= 4 ? 0.12 : 1);
+    dots.g.setAttribute("opacity", n >= 1 ? 1 : 0);
+    read.setAttribute("opacity", n === 1 ? 1 : n >= 2 ? 0.35 : 0); ring1.setAttribute("opacity", n === 1 ? 1 : 0);
+    write.setAttribute("opacity", n >= 1 ? 1 : 0); ptrE.setAttribute("opacity", n >= 1 ? 1 : 0);
+    toComma.setAttribute("opacity", n >= 2 ? 1 : 0); prog.setAttribute("opacity", n >= 2 ? 1 : 0);
+    pick.setAttribute("opacity", n === 3 ? 1 : 0); ring3.setAttribute("opacity", n === 3 ? 1 : 0);
+    A1.show(n === 3 ? 1 : 0); A1.pop(1);
+    src.setAttribute("opacity", n >= 4 ? 1 : 0); progColon.setAttribute("opacity", n >= 4 ? 1 : 0);
+    fill(n === 5 ? 1 : 0); A0.pop(1); ring3v.setAttribute("opacity", n === 5 ? 1 : 0);
+    if (n === 5) A0.set("U", M_VERM); else A0.set("E");
+    if (mv.reduce) return;
+    if (n === 1) {
+      dots.g.setAttribute("opacity", 0); read.setAttribute("opacity", 0); ring1.setAttribute("opacity", 0); write.setAttribute("opacity", 0); ptrE.setAttribute("opacity", 0);
+      mv.tween(0, 600, function (e) { dots.g.setAttribute("opacity", e); read.setAttribute("opacity", e); ring1.setAttribute("opacity", e); });
+      readP.forEach(function (p, i) { mv.along(p, P_BLUE, 300 + i * 40, 900, 4); });
+      mv.at(1700, function () { write.setAttribute("opacity", 1); });
+      mv.along(write, P_BLUE, 1700, 700, 6);
+      mv.at(2400, function () { ptrE.setAttribute("opacity", 1); });
+    }
+    if (n === 2) {
+      toComma.setAttribute("opacity", 0); prog.setAttribute("opacity", 0);
+      mv.at(100, function () { toComma.setAttribute("opacity", 1); });
+      mv.along(toComma, P_ROSE, 100, 900, 6);
+      mv.at(1000, function () { prog.setAttribute("opacity", 1); });
+    }
+    if (n === 3) {
+      pick.setAttribute("opacity", 0); ring3.setAttribute("opacity", 0); A1.show(0);
+      mv.at(100, function () { pick.setAttribute("opacity", 1); });
+      mv.along(pick, P_GREEN, 100, 1000, 6, true);
+      mv.at(1100, function () { ring3.setAttribute("opacity", 1); A1.show(1); });
+      mv.tween(1100, 500, function (e) { A1.pop(1 + 0.4 * Math.sin(e * Math.PI)); });
+    }
+    if (n === 4) {
+      later.setAttribute("opacity", 1); src.setAttribute("opacity", 0); progColon.setAttribute("opacity", 0);
+      mv.tween(0, 700, function (e) { later.setAttribute("opacity", 1 - 0.88 * e); });
+      mv.tween(600, 500, function (e) { src.setAttribute("opacity", e); });
+      mv.along(feed, M_VERM, 1000, 1000, 6);
+      mv.at(2000, function () { progColon.setAttribute("opacity", 1); });
+    }
+    if (n === 5) {
+      A0.set("E");
+      mv.tween(0, 900, fill);
+      mv.at(1000, function () { A0.set("U", M_VERM); });
+      mv.tween(1000, 500, function (e) { A0.pop(1 + 0.45 * Math.sin(e * Math.PI)); });
+      mv.tween(1600, 500, function (e) { ring3v.setAttribute("opacity", e); });
+    }
+    mv.run();
+  }, 5600);
 })();
 
 /* Primer 3: activation patching. Each run is a grid of activations, tokens across and layers up.
